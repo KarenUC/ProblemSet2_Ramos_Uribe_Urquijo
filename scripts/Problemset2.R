@@ -2,7 +2,7 @@
 # update: 18-06-2022
 ###----------------- Project Set 1----------###
 
-##### ---Limpiar Ambiente --- ###### gncbnnb
+##### ---Limpiar Ambiente --- ######
 
 rm(list = ls())
 
