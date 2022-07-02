@@ -74,4 +74,73 @@ test <- test %>%
                       "Pet", "Oc", "Des", "Ina", "Depto.y" ),.funs = factor)
 
 
+### --- 2. a) Data Cleaning --- ###
+### --- Missing Values
+
+# Sacar cantidad de NAs por variable
+cantidad_na <- sapply(train, function(x) sum(is.na(x)))
+cantidad_na <- data.frame(cantidad_na)
+cantidad_na<- data.frame(cantidad_na)%>%
+  rownames_to_column("variable")
+cantidad_na$porcentaje_na <- cantidad_na$cantidad_na/nrow(train)
+
+# Eliminamos variables que no aportan
+filtro <- cantidad_na$porcentaje_na > 0.8
+variables_eliminar <- cantidad_na$variable[filtro]
+train <- train %>% 
+  select(-variables_eliminar)
+
+
+### ----- Escoger variables que nos sirven para hacer el modelo -----####
+#Características de Individuo:
+#Edad(P6040), educación(P6210, P6210s1), salud(P6090), ahorro(P7510s5), genero(P6020)
+#desocupado (Des), ingreso (Ingtot)
+
+female<-ifelse(train$P6020==2,1,0)
+jh<-ifelse(train$P6050==1,1,0)
+id_hogar<-train$id
+DB<-data_frame(id_hogar,female,jh)
+female_jh<-ifelse(DB$jh==1,DB$female,0)
+DB<-data_frame(id_hogar,female,jh,female_jh)
+
+ocu<-ifelse(is.na(train$Oc),0,1)
+edad<-train$P6040
+DB<-data_frame(id_hogar,female,jh,female_jh,ocu,edad)
+edad_jh<-ifelse(DB$jh==1,train$P6040,0)
+DB<-data_frame(id_hogar,female,jh,female_jh,ocu,edad, edad_jh)
+DB$menores<-ifelse(DB$edad<18,1,0)
+levels(train$Oc)
+
+#Mirar si na eran ceros
+convert_number <- function(x){
+  x <- as.character(x)
+  x <- gsub(pattern = ",", replacement = ".",x = x, fixed = TRUE)
+  x <- as.numeric(x)
+  return(x)
+}
+
+DB$Ingtot<- convert_number(train$Ingtot)
+
+
+DB$Ingtot_jh<-ifelse(DB$jh==1,DB$Ingtot, 0)
+
+DB_2<-DB %>% group_by(id_hogar) %>% summarise(total_female = sum(female),
+                                              female_jh = sum(female_jh),
+                                              num_ocu = sum(ocu),
+                                              edad_jh = sum(edad_jh),
+                                              menores= sum(menores),
+                                              Ingtot_jh = sum(Ingtot_jh)) 
+
+#Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
+#genero_jef(P6020), ocupado (Oc), educación(P6210, P6210s1),desocupado (Des), 
+#ingreso (Ingtot)
+
+#Caracteristicas del hogar:
+#Vivienda propia (P5090), total personas en el hogar (), choques a salud(P6240, opción 5),
+#choques ,ingreso (Ingtotugarr) 
+
+modelo1_pobreza<-glm(Pobre~P5140 + Nper ,train)
+
+
+
 
