@@ -180,6 +180,7 @@ DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
 
 train_hogares <-merge(train_hogares,DB_2, by="id")
 
+
 #Estadísticas descriptivas
 
 train_hogares <- train_hogares %>%
@@ -209,23 +210,22 @@ stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "men
 ##Classification models
 ##Probabilidad de hogar pobre
 train_hogares$Pobre <-as.factor(train_hogares$Pobre)
-modelo1 <- glm( Pobre ~ P5090  + Nper + Ingtotugarr + total_female + female_jh +
-                  num_ocu ,
+##Creación de variable Vivienda Propia
+train_hogares$viviendapropia <-ifelse (train_hogares$P5090==1 | train_hoagres$P5090==2,1,0)
+model_log_1 <- glm( Pobre ~ viviendapropia + Nper + Ingtotugarr + total_female + female_jh +
+                  num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
+                  num_afsalud + jh_prod_finan,
                family=binomial(link="logit"),
                data= train_hogares
                )
-summary(modelo1)
+summary(model_log_1)
 
-modelo1 <- glm( Pobre ~ P5090 + Nper + Ingtotugarr +  total_female + female_jh + 
-                  num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + 
-                  jh_ocup + num_afsalud + jh_prod_finan,
-                family=binomial(link="logit"),
-                data= train_hogares
-)
-summary(modelo1)
+
+
+
 
 ##Ingreso de los hogares
-modelo2<- lm(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
+modelo<- lm(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
                 edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
                 num_afsalud + jh_prod_finan, data= train_hogares
                 )
