@@ -6,24 +6,21 @@
 
 rm(list = ls())
 
-setwd("C:\Users\pau_9\Documents\GitHub\ProblemSet2_Ramos_Uribe_Urquijo")
+setwd("C:/Users/pau_9/Documents/Big Data/dataPS2")
 ##setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/stores")
 getwd()
 
 ## Data Cleaning
-unzip("dataPS2.zip",  list =  T)
+## unzip("dataPS2.zip",  list =  T)
 
-train_hogares <- read.csv("data/train_hogares.csv" ,header=TRUE, sep="," )
-train_personas <- read.csv("data/train_personas.csv",header=TRUE, sep="," )
-test_hogares <- read.csv("data/test_hogares.csv",header=TRUE, sep="," )
-test_personas <- read.csv("data/test_personas.csv",header=TRUE, sep="," )
+## train_hogares <- read.csv("data/train_hogares.csv", header=TRUE, sep="," )
+## train_personas <- read.csv("data/train_personas.csv",header=TRUE, sep="," )
+## test_hogares <- read.csv("data/test_hogares.csv",header=TRUE, sep="," )
+## test_personas <- read.csv("data/test_personas.csv",header=TRUE, sep="," )
 
-colnames(train_hogares)
-colnames(train_personas)
+## colnames(train_hogares)
+## colnames(train_personas)
 
-##### ---Limpiar Ambiente --- ######
-
-rm(list = ls())
 
 require(pacman)
 
@@ -58,6 +55,13 @@ train_hogares <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Mach
 test_hogares <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/test_hogares.csv",header=TRUE, sep="," )
 train_personas <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/train_personas.csv",header=TRUE, sep="," )
 test_personas <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/test_personas.csv",header=TRUE, sep="," )
+
+
+submission <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/submission_template.csv",header=TRUE, sep="," )
+train_hogares <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/train_hogares.csv",header=TRUE, sep="," )
+test_hogares <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/test_hogares.csv",header=TRUE, sep="," )
+train_personas <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/train_personas.csv",header=TRUE, sep="," )
+test_personas <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/test_personas.csv",header=TRUE, sep="," )
 
 train<-merge(train_hogares,train_personas, by="id")
 test<-merge(test_hogares,test_personas, by="id")
@@ -112,24 +116,40 @@ train <- train %>%
 
 
 ### ----- Escoger variables que nos sirven para hacer el modelo -----####
+
+#Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
+#genero_jef(P6020), ocupado (Oc), educación(P6210, P6210s1),desocupado (Des), 
+#ingreso (Ingtot)
+
 #Características de Individuo:
 #Edad(P6040), educación(P6210, P6210s1), salud(P6090), ahorro(P7510s5), genero(P6020)
 #desocupado (Des), ingreso (Ingtot)
 
+#Caracteristicas del hogar:
+#Vivienda propia (P5090), total personas en el hogar (), choques a salud(P6240, opción 5),
+#choques ,ingreso (Ingtotugarr) 
+
 female<-ifelse(train$P6020==2,1,0)
 jh<-ifelse(train$P6050==1,1,0)
-id_hogar<-train$id
-DB<-data_frame(id_hogar,female,jh)
+id<-train$id
+DB<-data_frame(id,female,jh)
 female_jh<-ifelse(DB$jh==1,DB$female,0)
-DB<-data_frame(id_hogar,female,jh,female_jh)
+DB<-data_frame(id,female,jh,female_jh)
 
 ocu<-ifelse(is.na(train$Oc),0,1)
 edad<-train$P6040
-DB<-data_frame(id_hogar,female,jh,female_jh,ocu,edad)
+DB<-data_frame(id,female,jh,female_jh,ocu,edad)
 edad_jh<-ifelse(DB$jh==1,train$P6040,0)
-DB<-data_frame(id_hogar,female,jh,female_jh,ocu,edad, edad_jh)
+DB<-data_frame(id,female,jh,female_jh,ocu,edad, edad_jh)
 DB$menores<-ifelse(DB$edad<18,1,0)
+DB$max_educ_jh <-ifelse(DB$jh==1,train$P6210s1,0)
+DB$jh_ocup <-ifelse(DB$jh==1,ocu,0)
+DB$afiliado<-ifelse(train$P6090!=1 | is.na(train$P6090),0,1)
+DB$prod_finan_jh<-ifelse(train$P7510s5!=1 | is.na(train$P6090),0,1)
+DB$Estrato<-ifelse(DB$jh==1,train$Estrato1,0)
 levels(train$Oc)
+levels(train$P6090)
+
 
 #Mirar si na eran ceros
 convert_number <- function(x){
@@ -144,23 +164,73 @@ DB$Ingtot<- convert_number(train$Ingtot)
 
 DB$Ingtot_jh<-ifelse(DB$jh==1,DB$Ingtot, 0)
 
-DB_2<-DB %>% group_by(id_hogar) %>% summarise(total_female = sum(female),
+DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
                                               female_jh = sum(female_jh),
                                               num_ocu = sum(ocu),
                                               edad_jh = sum(edad_jh),
                                               menores= sum(menores),
-                                              Ingtot_jh = sum(Ingtot_jh)) 
-
-#Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
-#genero_jef(P6020), ocupado (Oc), educación(P6210, P6210s1),desocupado (Des), 
-#ingreso (Ingtot)
-
-#Caracteristicas del hogar:
-#Vivienda propia (P5090), total personas en el hogar (), choques a salud(P6240, opción 5),
-#choques ,ingreso (Ingtotugarr) 
-
-modelo1_pobreza<-glm(Pobre~P5140 + Nper ,train)
+                                              Ingtot_jh = sum(Ingtot_jh),
+                                              max_educ_jh= sum( max_educ_jh), 
+                                              jh_ocup= sum(jh_ocup),
+                                              num_afsalud = sum(afiliado),
+                                              jh_prod_finan =sum(prod_finan_jh),
+                                              jh_estrato=sum(Estrato)
+                                              ) 
 
 
+train_hogares <-merge(train_hogares,DB_2, by="id")
+
+#Estadísticas descriptivas
+
+train_hogares <- train_hogares %>%
+  mutate_at(.vars = c("Clase", "Dominio","P5090", "Pobre", "Indigente",
+                      "Depto", "female_jh", "jh_ocup", "jh_prod_finan", "jh_estrato" ),.funs = factor)
+library(stargazer)
+library(skimr)
+skim(train_hogares)
+#Verificación de missing values
+sum(is.na(train_hogares$Ingtot_jh))
+sum(is.na(train_hogares$max_educ_jh))
+#Imputación de datos
+train_hogares = train_hogares %>%
+  mutate(Ingtot_jh = ifelse(is.na(Ingtot_jh),
+                         yes = Ingtotugarr,
+                         no = Ingtot_jh))
+
+#Eliminar NA en max_edu_jh
+train_hogares <- train_hogares[!is.na(train_hogares$max_educ_jh),]
+
+
+stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "menores", "Ingtot_jh", "max_educ_jh", "num_afsalud" )], type = "text")
+
+
+#Modelos para pedecir pobreza de los hogares
+
+##Classification models
+##Probabilidad de hogar pobre
+train_hogares$Pobre <-as.factor(train_hogares$Pobre)
+modelo1 <- glm( Pobre ~ P5090  + Nper + Ingtotugarr + total_female + female_jh +
+                  num_ocu ,
+               family=binomial(link="logit"),
+               data= train_hogares
+               )
+summary(modelo1)
+
+modelo1 <- glm( Pobre ~ P5090 + Nper + Ingtotugarr +  total_female + female_jh + 
+                  num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + 
+                  jh_ocup + num_afsalud + jh_prod_finan,
+                family=binomial(link="logit"),
+                data= train_hogares
+)
+summary(modelo1)
+
+##Ingreso de los hogares
+modelo2<- lm(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
+                edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
+                num_afsalud + jh_prod_finan, data= train_hogares
+                )
+summary(modelo2)
+
+stargazer(modelo1, modelo2)
 
 
