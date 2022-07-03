@@ -211,7 +211,8 @@ stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "men
 ##Probabilidad de hogar pobre
 train_hogares$Pobre <-as.factor(train_hogares$Pobre)
 ##Creación de variable Vivienda Propia
-train_hogares$viviendapropia <-ifelse (train_hogares$P5090==1 | train_hoagres$P5090==2,1,0)
+train_hogares$viviendapropia <-ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0)
+
 model_log_1 <- glm( Pobre ~ viviendapropia + Nper + Ingtotugarr + total_female + female_jh +
                   num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
                   num_afsalud + jh_prod_finan,
@@ -224,13 +225,20 @@ summary(model_log_1)
 
 
 
+
 ##Ingreso de los hogares
-modelo<- lm(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
+model1<- lm(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
                 edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
                 num_afsalud + jh_prod_finan, data= train_hogares
                 )
-summary(modelo2)
+summary(model1)
 
-stargazer(modelo1, modelo2)
+
+forward <- train(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
+                   edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
+                   num_afsalud + jh_prod_finan, data = train_hogares,
+                 method = "leapForward",
+                 trControl = trainControl(method = "cv", number = 10))
+
 
 
