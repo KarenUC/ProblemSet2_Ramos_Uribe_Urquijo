@@ -1,6 +1,25 @@
 # Paula Ramos, Karen Uribe y Juan D. Urquijo
 # update: 02-07-2022
-###----------------- Project Set 1----------###
+###----------------- Project Set 2----------###
+
+##### ---Limpiar Ambiente --- ######
+
+rm(list = ls())
+
+setwd("C:\Users\pau_9\Documents\GitHub\ProblemSet2_Ramos_Uribe_Urquijo")
+##setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/stores")
+getwd()
+
+## Data Cleaning
+unzip("dataPS2.zip",  list =  T)
+
+train_hogares <- read.csv("data/train_hogares.csv" ,header=TRUE, sep="," )
+train_personas <- read.csv("data/train_personas.csv",header=TRUE, sep="," )
+test_hogares <- read.csv("data/test_hogares.csv",header=TRUE, sep="," )
+test_personas <- read.csv("data/test_personas.csv",header=TRUE, sep="," )
+
+colnames(train_hogares)
+colnames(train_personas)
 
 ##### ---Limpiar Ambiente --- ######
 
@@ -29,6 +48,7 @@ p_load(skimr, # summary data
        Rcpp,
        robotstxt,
        sjPlot)
+
 
 
 
