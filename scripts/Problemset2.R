@@ -176,13 +176,11 @@ stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "men
 ##Probabilidad de hogar pobre
 train_hogares$Pobre <-as.factor(train_hogares$Pobre)
 ##Creación de variable Vivienda Propia
-train_hogares$viviendapropia <-ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0)
-train_hogares$viviendapropia<- as.factor(train_hogares$viviendapropia)
-levels(train_hogares$jh_prod_finan)
+train_hogares$viviendapropia <-as.factor(ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0))
 
 model_log_1 <- glm( Pobre ~ viviendapropia + Nper + Ingtotugarr + total_female + female_jh +
                   num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
-                  num_afsalud + jh_prod_finan,
+                  num_afsalud + prod_finan_jh,
                family=binomial(link="logit"),
                data= train_hogares
                )
