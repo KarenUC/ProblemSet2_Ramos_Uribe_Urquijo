@@ -12,22 +12,17 @@ require(pacman)
 p_load(rio) # Librer?a para importar datos 
 p_load(tidyverse) # Librer?a para limpiar datos
 p_load(e1071) # Tiene la funci?n para calcular skewness
-p_load(EnvStats) # Transformaci?n Box-Cox
 p_load(tidymodels) # Modelos ML
 p_load(ggplot2) # Librer?a para visualizar datos
 p_load(scales) # Formato de los ejes en las gr?ficas
 p_load(ggpubr) # Combinar gr?ficas
-p_load(knitr) # Tablas dentro de Rmarkdown
-p_load(kableExtra) # Tablas dentro de Rmarkdown
 p_load(skimr, # summary data
        caret, # Classification And REgression Training
        rvest,
        stringr,
        dplyr,
-       RSelenium,
-       Rcpp,
-       robotstxt,
-       sjPlot)
+       robotstxt
+       )
 
 
 #########################################################################################
@@ -45,7 +40,7 @@ test_personas<-readRDS("data/test_personas.Rds")
 
 #########################################################################################
 
-train<-merge(train_hogares,train_personas, by="id")
+train<-left_join(train_hogares,train_personas, by="id")
 test<-merge(test_hogares,test_personas, by="id")
 
 # Utilizando el diccionario, identificamos variables categoricas para volverlas a tipo factor
@@ -140,19 +135,17 @@ DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
                                               max_educ_jh= sum( max_educ_jh), 
                                               jh_ocup= sum(jh_ocup),
                                               num_afsalud = sum(afiliado),
-                                              prod_finan_jh = prod_finan_jh,
                                               jh_estrato=sum(Estrato)
                                               ) 
 
 
-train_hogares <-merge(train_hogares,DB_2, by="id")
+train_hogares <-train_hogares %>% left_join(DB_2,by="id")
 
-
-#Estad√≠sticas descriptivas
+#Estadisticas descriptivas
 
 train_hogares <- train_hogares %>%
   mutate_at(.vars = c("Clase", "Dominio","P5090", "Pobre", "Indigente",
-                      "Depto", "female_jh", "jh_ocup", "prod_finan_jh", "jh_estrato" ),.funs = factor)
+                      "Depto", "female_jh", "jh_ocup", "jh_estrato" ),.funs = factor)
 library(stargazer)
 library(skimr)
 skim(train_hogares)
@@ -180,11 +173,9 @@ box_plot <- box_plot +
   scale_fill_grey() + theme_classic()+
   labs(x= "Pobres", y ="Ingresos Totales Hogar") 
 
-pobre_bar <- ggplot(data = train_hogares, aes(x = Pobre)) +
-  geom_bar(fill="steelblue") +
-  theme_minimal() +
+pobre_bar <- ggplot(data = train_hogares, aes(x = Pobre, fill=Pobre)) +
+  geom_bar() +
   labs (x= "Pobre =1", y = "N˙mero de Pobres")
-
 
 
 ############### ------Modelos para pedecir pobreza de los hogares---------############################
@@ -205,9 +196,9 @@ class(train_hogares$Pobre)
 set.seed(101010)
 #Modelo 1
 
-model_log_1 <- glm(Pobre ~ factor(viviendapropia) + Nper + Ingtotugarr + total_female + factor(female_jh) +
+model_log_1 <- glm(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
                   num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
-                  num_afsalud + factor(prod_finan_jh),
+                  num_afsalud,
                   data= train_hogares,
                   family=binomial(link="logit"))
 
@@ -216,7 +207,7 @@ summary(model_log_1)
 
 #Modelo 2 - Sin productos financieros
 
-model_log_2 <- glm( as.factor(Pobre) ~ viviendapropia + Nper + Ingtotugarr + total_female + female_jh +
+model_log_2 <- glm( as.factor(Pobre) ~ viviendapropia + total_female + female_jh +
                       num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
                       num_afsalud,
                     family=binomial(link="logit"),
@@ -226,7 +217,7 @@ summary(model_log_2)
 
 #Modelo 3 - Caracteristicas del Hogar unicamente
 
-model_log_3 <- glm(Pobre ~ viviendapropia + Nper  + total_female  +
+model_log_3 <- glm(Pobre ~ viviendapropia  + total_female  +
                       num_ocu  + menores  +  num_afsalud,
                     family=binomial(link="logit"),
                     data= train_hogares)
@@ -246,7 +237,7 @@ summary(model_log_4)
 
 #Modelo 5 - Transformaciones edad e ingreso
 
-model5 <- as.formula(Pobre ~ viviendapropia + Nper + log(Ingtotugarr+1) + total_female + female_jh +
+model5 <- as.formula(Pobre ~ viviendapropia + total_female + female_jh +
                        num_ocu + edad_jh + (edad_jh)^2 + menores + log(Ingtot_jh+1) + max_educ_jh + jh_ocup +
                        num_afsalud + prod_finan_jh)
 
@@ -262,6 +253,8 @@ stargazer(model_log_1, model_log_2, model_log_3, model_log_4, model_log_5, type 
 
 stargazer(model_log_1, model_log_2, model_log_3, model_log_4, model_log_5, type = "latex")
 
+
+
 ###Predicciones Logit
 
 library("dplyr") #for data wrangling
@@ -273,7 +266,23 @@ train_hogares$y_hat_3 <- predict(model_log_3 , newdata=train_hogares , type="res
 train_hogares$y_hat_4 <- predict(model_log_4 , newdata=train_hogares , type="response")
 train_hogares$y_hat_5 <- predict(model_log_5 , newdata=train_hogares , type="response")
 
+summary(train_hogares$y_hat_1)
+summary(train_hogares$y_hat_2)
 summary(train_hogares$y_hat_3)
+summary(train_hogares$y_hat_4)
+summary(train_hogares$y_hat_5)
+
+
+
+#Profe
+model_log_profe <- glm(Pobre ~  P5130,
+                       family=binomial(link="logit"),
+                       data= train_hogares)
+###Prediccion
+train_hogares$y_hat_profe <- predict(model_log_profe , newdata=train_hogares , type="response")
+summary(train_hogares$y_hat_profe )
+
+
 
 ####----Regression models ---####
 
@@ -313,4 +322,6 @@ forward <- train(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu
                  trControl = trainControl(method = "cv", number = 10))
 
 
-
+class(train_hogares$Pobre)
+levels(train_hogares$Pobre)
+train_hogares$Pobre <- as.factor(train_hogares$Pobre)
