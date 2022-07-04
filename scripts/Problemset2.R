@@ -350,7 +350,7 @@ roc_ROCR5 <- performance(pred5,"tpr","fpr")
 ROC_5 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
 abline(a = 0, b = 1)
 
-garrange(pred1, pred2, pred3, pred4, pred5)
+ggarrange(pred1, pred2, pred3, pred4, pred5)
 
 ##Area under the curve (AUC)
 
