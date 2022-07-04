@@ -6,17 +6,17 @@
 
 rm(list = ls())
 
-setwd("C:/Users/pau_9/Documents/Big Data/dataPS2")
+##setwd("C:/Users/pau_9/Documents/Big Data/dataPS2")
 ##setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/stores")
-getwd()
+setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/stores")
 
 ## Data Cleaning
-## unzip("dataPS2.zip",  list =  T)
+unzip("dataPS2.zip",  list =  T)
 
-## train_hogares <- read.csv("data/train_hogares.csv", header=TRUE, sep="," )
-## train_personas <- read.csv("data/train_personas.csv",header=TRUE, sep="," )
-## test_hogares <- read.csv("data/test_hogares.csv",header=TRUE, sep="," )
-## test_personas <- read.csv("data/test_personas.csv",header=TRUE, sep="," )
+train_hogares <- read.csv("data/train_hogares.csv", header=TRUE, sep="," )
+train_personas <- read.csv("data/train_personas.csv",header=TRUE, sep="," )
+test_hogares <- read.csv("data/test_hogares.csv",header=TRUE, sep="," )
+test_personas <- read.csv("data/test_personas.csv",header=TRUE, sep="," )
 
 ## colnames(train_hogares)
 ## colnames(train_personas)
