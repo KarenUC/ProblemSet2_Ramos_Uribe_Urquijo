@@ -1,31 +1,14 @@
 # Paula Ramos, Karen Uribe y Juan D. Urquijo
-# update: 02-07-2022
+# update: 04-07-2022
 ###----------------- Project Set 2----------###
 
 ##### ---Limpiar Ambiente --- ######
 
 rm(list = ls())
 
-##setwd("C:/Users/pau_9/Documents/Big Data/dataPS2")
-##setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/stores")
-setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/stores")
-
-## Data Cleaning
-unzip("dataPS2.zip",  list =  T)
-
-train_hogares <- read.csv("data/train_hogares.csv", header=TRUE, sep="," )
-train_personas <- read.csv("data/train_personas.csv",header=TRUE, sep="," )
-test_hogares <- read.csv("data/test_hogares.csv",header=TRUE, sep="," )
-test_personas <- read.csv("data/test_personas.csv",header=TRUE, sep="," )
-
-## colnames(train_hogares)
-## colnames(train_personas)
-
-
+##### ---Cargar paquetes --- ######
 require(pacman)
-
 # usar la funci?n p_load de pacman para instalar/llamar las librer?as de la clase
-
 p_load(rio) # Librer?a para importar datos 
 p_load(tidyverse) # Librer?a para limpiar datos
 p_load(e1071) # Tiene la funci?n para calcular skewness
@@ -47,26 +30,22 @@ p_load(skimr, # summary data
        sjPlot)
 
 
+#########################################################################################
+#Cargar los datos
 
+#test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
+setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+unzip("dataPS2RDS.zip",  list =  T)
+train_hogares<-readRDS("data/train_hogares.Rds")
+train_personas<-readRDS("data/train_personas.Rds")
+test_hogares<-readRDS("data/test_hogares.Rds")
+test_personas<-readRDS("data/test_personas.Rds")
 
-train_hogares <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/submission_template.csv",header=TRUE, sep="," )
-train_hogares <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/train_hogares.csv",header=TRUE, sep="," )
-test_hogares <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/test_hogares.csv",header=TRUE, sep="," )
-train_personas <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/train_personas.csv",header=TRUE, sep="," )
-test_personas <- read.csv("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/data/test_personas.csv",header=TRUE, sep="," )
-
-
-submission <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/submission_template.csv",header=TRUE, sep="," )
-train_hogares <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/train_hogares.csv",header=TRUE, sep="," )
-test_hogares <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/test_hogares.csv",header=TRUE, sep="," )
-train_personas <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/train_personas.csv",header=TRUE, sep="," )
-test_personas <- read.csv("C:/Users/pau_9/Documents/Big Data/dataPS2/data/test_personas.csv",header=TRUE, sep="," )
+#########################################################################################
 
 train<-merge(train_hogares,train_personas, by="id")
 test<-merge(test_hogares,test_personas, by="id")
-
-summary(train) 
 
 # Utilizando el diccionario, identificamos variables categoricas para volverlas a tipo factor
 summary(train)
@@ -97,6 +76,8 @@ test <- test %>%
                       "P7510s3", "P7510s5","P7510s6","P7510s7",
                       "Pet", "Oc", "Des", "Ina", "Depto.y" ),.funs = factor)
 
+summary(train_personas$P7510s5)
+summary(train$P7510s5)
 
 ### --- 2. a) Data Cleaning --- ###
 ### --- Missing Values
@@ -108,8 +89,10 @@ cantidad_na<- data.frame(cantidad_na)%>%
   rownames_to_column("variable")
 cantidad_na$porcentaje_na <- cantidad_na$cantidad_na/nrow(train)
 
+
+
 # Eliminamos variables que no aportan
-filtro <- cantidad_na$porcentaje_na > 0.8
+filtro <- cantidad_na$porcentaje_na > 0.85
 variables_eliminar <- cantidad_na$variable[filtro]
 train <- train %>% 
   select(-variables_eliminar)
@@ -133,35 +116,18 @@ female<-ifelse(train$P6020==2,1,0)
 jh<-ifelse(train$P6050==1,1,0)
 id<-train$id
 DB<-data_frame(id,female,jh)
-female_jh<-ifelse(DB$jh==1,DB$female,0)
-DB<-data_frame(id,female,jh,female_jh)
 
-ocu<-ifelse(is.na(train$Oc),0,1)
-edad<-train$P6040
-DB<-data_frame(id,female,jh,female_jh,ocu,edad)
-edad_jh<-ifelse(DB$jh==1,train$P6040,0)
-DB<-data_frame(id,female,jh,female_jh,ocu,edad, edad_jh)
+DB$female_jh<-ifelse(DB$jh==1,DB$female,0)
+DB$ocu<-ifelse(is.na(train$Oc),0,1)
+DB$edad<-train$P6040
+DB$edad_jh<-ifelse(DB$jh==1,train$P6040,0)
 DB$menores<-ifelse(DB$edad<18,1,0)
 DB$max_educ_jh <-ifelse(DB$jh==1,train$P6210s1,0)
-DB$jh_ocup <-ifelse(DB$jh==1,ocu,0)
+DB$jh_ocup <-ifelse(DB$jh==1,DB$ocu,0)
 DB$afiliado<-ifelse(train$P6090!=1 | is.na(train$P6090),0,1)
-DB$prod_finan_jh<-ifelse(train$P7510s5!=1 | is.na(train$P6090),0,1)
+DB$prod_finan_jh<-as.factor(ifelse(train$P7510s5!=1 | is.na(train$P7510s5),0,1))
 DB$Estrato<-ifelse(DB$jh==1,train$Estrato1,0)
-levels(train$Oc)
-levels(train$P6090)
-
-
-#Mirar si na eran ceros
-convert_number <- function(x){
-  x <- as.character(x)
-  x <- gsub(pattern = ",", replacement = ".",x = x, fixed = TRUE)
-  x <- as.numeric(x)
-  return(x)
-}
-
-DB$Ingtot<- convert_number(train$Ingtot)
-
-
+DB$Ingtot<- train$Ingtot
 DB$Ingtot_jh<-ifelse(DB$jh==1,DB$Ingtot, 0)
 
 DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
@@ -173,7 +139,7 @@ DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
                                               max_educ_jh= sum( max_educ_jh), 
                                               jh_ocup= sum(jh_ocup),
                                               num_afsalud = sum(afiliado),
-                                              jh_prod_finan =sum(prod_finan_jh),
+                                              prod_finan_jh = prod_finan_jh,
                                               jh_estrato=sum(Estrato)
                                               ) 
 
@@ -185,7 +151,7 @@ train_hogares <-merge(train_hogares,DB_2, by="id")
 
 train_hogares <- train_hogares %>%
   mutate_at(.vars = c("Clase", "Dominio","P5090", "Pobre", "Indigente",
-                      "Depto", "female_jh", "jh_ocup", "jh_prod_finan", "jh_estrato" ),.funs = factor)
+                      "Depto", "female_jh", "jh_ocup", "prod_finan_jh", "jh_estrato" ),.funs = factor)
 library(stargazer)
 library(skimr)
 skim(train_hogares)
@@ -204,14 +170,15 @@ train_hogares <- train_hogares[!is.na(train_hogares$max_educ_jh),]
 
 stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "menores", "Ingtot_jh", "max_educ_jh", "num_afsalud" )], type = "text")
 
-
-#Modelos para pedecir pobreza de los hogares
+############### ------Modelos para pedecir pobreza de los hogares---------############################
 
 ##Classification models
 ##Probabilidad de hogar pobre
 train_hogares$Pobre <-as.factor(train_hogares$Pobre)
 ##Creación de variable Vivienda Propia
 train_hogares$viviendapropia <-ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0)
+train_hogares$viviendapropia<- as.factor(train_hogares$viviendapropia)
+levels(train_hogares$jh_prod_finan)
 
 model_log_1 <- glm( Pobre ~ viviendapropia + Nper + Ingtotugarr + total_female + female_jh +
                   num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
