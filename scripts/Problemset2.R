@@ -30,9 +30,9 @@ p_load(skimr, # summary data
 
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
-#setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
 #setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
-setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
 
 unzip("dataPS2RDS.zip",  list =  T)
 train_hogares<-readRDS("data/train_hogares.Rds")
@@ -355,20 +355,22 @@ ggarrange(pred1, pred2, pred3, pred4, pred5)
 ##Area under the curve (AUC)
 
 auc_ROCR1 <- performance(pred1, measure = "auc")
-auc ROCR1@y.values[[1]]
+auc_ROCR1@y.values[[1]]
 
 auc_ROCR2 <- performance(pred2, measure = "auc")
-auc ROCR2@y.values[[1]]
+auc_ROCR2@y.values[[1]]
 
 auc_ROCR3 <- performance(pred3, measure = "auc")
-auc ROCR3@y.values[[1]]
+auc_ROCR3@y.values[[1]]
 
 auc_ROCR4 <- performance(pred4, measure = "auc")
-auc ROCR4@y.values[[1]]
+auc_ROCR4@y.values[[1]]
 
 auc_ROCR5 <- performance(pred5, measure = "auc")
-auc ROCR5@y.values[[1]]
+auc_ROCR5@y.values[[1]]
 
+###############################################################################
+###############################################################################
 
 ####----Regression models ---####
 
@@ -378,36 +380,121 @@ library(glmnet)
 library(corrr)
 library(pls)
 
+##### Test data ##############
 
-### ----Ingreso de los hogares
+
+### --- 2. a) Data Cleaning --- ###
+### --- Missing Values
+
+# Sacar cantidad de NAs por variable
+cantidad_na_test <- sapply(test, function(x) sum(is.na(x)))
+cantidad_na_test <- data.frame(cantidad_na_test)
+cantidad_na_test<- data.frame(cantidad_na_test)%>%
+rownames_to_column("variable")
+cantidad_na_test$porcentaje_na <- cantidad_na_test$cantidad_na/nrow(train)
+
+
+
+# Eliminamos variables que no aportan
+filtro <- cantidad_na_test$porcentaje_na > 0.85
+variables_eliminar_test <- cantidad_na_test$variable[filtro]
+test <- test %>% 
+  select(-variables_eliminar_test)
+
+
+### ----- Escoger variables que nos sirven para hacer el modelo -----####
+
+#Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
+#genero_jef(P6020), ocupado (Oc), educación(P6210, P6210s1),desocupado (Des), 
+#ingreso (Ingtot)
+
+#Características de Individuo:
+#Edad(P6040), educación(P6210, P6210s1), salud(P6090), ahorro(P7510s5), genero(P6020)
+#desocupado (Des), ingreso (Ingtot)
+
+#Caracteristicas del hogar:
+#Vivienda propia (P5090), total personas en el hogar (), choques a salud(P6240, opción 5),
+#choques ,ingreso (Ingtotugarr) 
+
+female<-ifelse(test$P6020==2,1,0)
+jh<-ifelse(test$P6050==1,1,0)
+id<-test$id
+DB_test<-data_frame(id,female,jh)
+
+DB_test$female_jh<-ifelse(DB_test$jh==1,DB$female,0)
+DB_test$ocu<-ifelse(is.na(test$Oc),0,1)
+DB_test$edad<-test$P6040
+DB_test$edad_jh<-ifelse(DB_test$jh==1,test$P6040,0)
+DB_test$menores<-ifelse(DB_test$edad<18,1,0)
+DB_test$max_educ_jh <-ifelse(DB_test$jh==1,test$P6210s1,0)
+DB_test$jh_ocup <-ifelse(DB_test$jh==1,DB_test$ocu,0)
+DB_test$afiliado<-ifelse(test$P6090!=1 | is.na(test$P6090),0,1)
+DB_test$prod_finan_jh<-(ifelse(test$P7510s5!=1 | is.na(test$P7510s5),0,1))
+
+DB_test$Estrato<-ifelse(DB_test$jh==1,test$Estrato1,0)
+
+
+DB_test$Ingtot<- test$Ingtot
+DB_test$Ingtot_jh<-ifelse(DB_test$jh==1,DB_test$Ingtot, 0)
+
+
+
+DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
+                                        female_jh = sum(female_jh),
+                                        num_ocu = sum(ocu),
+                                        edad_jh = sum(edad_jh),
+                                        menores= sum(menores),
+                                        Ingtot_jh = sum(Ingtot_jh),
+                                        max_educ_jh= sum( max_educ_jh), 
+                                        jh_ocup= sum(jh_ocup),
+                                        num_afsalud = sum(afiliado),
+                                        jh_estrato=sum(Estrato),
+                                        prod_finan_jh=sum(prod_finan_jh)
+) 
+
+
+train_hogares <-train_hogares %>% left_join(DB_2,by="id")
+
+
+
+test_hogares$viviendapropia <-as.factor(ifelse (test_hogares$P5090==1 | test_hogares$P5090==2,1,0))
+
+###############################################################################
+### ----Ingreso de los hogares---- #####
 
 hist(train_hogares$Ingtotugarr)
 
-df_correlaciones <- train_hogares %>%
-  correlate(method = "pearson") %>%
-  stretch(remove.dups = TRUE)
-
-
+train_hogares$Ingtotugarr<-scale(train_hogares$Ingtotugarr)
 
 # Modelo 1
-model1<- lm(Ingtotugarr ~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+model1_ols<- lm(Ingtotugarr ~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
                 edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
                 num_afsalud + prod_finan_jh, data= train_hogares
                 )
-summary(model1)
+summary(model1_ols)
+
+# Predicciones de entrenamiento
+# ==============================================================================
+predicciones_train_modelo1_ols <- predict(model1_ols, newdata = train_hogares)
+
+# MSE de entrenamiento
+# ==============================================================================
+training_mse_modelo1_ols <- mean((predicciones_train_modelo1_ols - train_hogares$Ingtotugarr)^2)
+paste("Error (mse) de entrenamiento:", training_mse_modelo1_ols)
 
 
-# Regularizacion
+####
+#TOCA HACER LAS PREDICCIONES CON TEST
 
 
+###### -------  Ridge -----------############
 
-forward <- train(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
-                   edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
-                   num_afsalud + jh_prod_finan, data = train_hogares,
-                 method = "leapForward",
-                 trControl = trainControl(method = "cv", number = 10))
+# Matrices de entrenamiento y test
+# ==============================================================================
+x_train <- model.matrix(fat~., data = datos_train)[, -1]
+y_train <- datos_train$fat
+
+x_test <- model.matrix(fat~., data = datos_test)[, -1]
+y_test <- datos_test$fat
 
 
-class(train_hogares$Pobre)
-levels(train_hogares$Pobre)
-train_hogares$Pobre <- as.factor(train_hogares$Pobre)
