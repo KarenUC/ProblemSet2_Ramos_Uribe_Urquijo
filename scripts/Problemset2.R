@@ -31,7 +31,9 @@ p_load(skimr, # summary data
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
 #setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
-setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
+
 unzip("dataPS2RDS.zip",  list =  T)
 train_hogares<-readRDS("data/train_hogares.Rds")
 train_personas<-readRDS("data/train_personas.Rds")
@@ -167,7 +169,7 @@ train_hogares <- train_hogares[!is.na(train_hogares$max_educ_jh),]
 
 stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "menores", "Ingtot_jh", "max_educ_jh", "num_afsalud" )], type = "text")
 
-### Gráficas estadisticas descriptivas ###
+### Gr?ficas estadisticas descriptivas ###
 
 box_plot <- ggplot(data=train_hogares , mapping = aes(as.factor(Pobre) , Ingtotugarr)) + 
   geom_boxplot()
@@ -178,7 +180,7 @@ box_plot <- box_plot +
 
 pobre_bar <- ggplot(data = train_hogares, aes(x = Pobre, fill=Pobre)) +
   geom_bar() +
-  labs (x= "Pobre =1", y = "Número de Pobres")
+  labs (x= "Pobre =1", y = "N?mero de Pobres")
 
 
 ############### ------Modelos para pedecir pobreza de los hogares---------############################
@@ -285,7 +287,7 @@ train_hogares$pobre_prob3 = ifelse(train_hogares$y_hat_3>rule,1,0)
 train_hogares$pobre_prob4 = ifelse(train_hogares$y_hat_4>rule,1,0)
 train_hogares$pobre_prob5 = ifelse(train_hogares$y_hat_5>rule,1,0)
 
-# Matriz clasificación
+# Matriz clasificaci?n
 
 ## logit
 cm_logit1 = confusionMatrix(data=factor(train_hogares$pobre_prob1) , 
@@ -307,6 +309,66 @@ cm_logit4 = confusionMatrix(data=factor(train_hogares$pobre_prob4) ,
 cm_logit5 = confusionMatrix(data=factor(train_hogares$pobre_prob5) , 
                             reference=factor(train_hogares$Pobre) , 
                             mode="sens_spec" , positive="1")
+##Matriz de confusiÃ³n para cada modelo
+cm1 <- cm_logit1$table
+cm2 <- cm_logit2$table
+cm3 <- cm_logit3$table
+cm4 <- cm_logit4$table
+cm5 <- cm_logit5$table
+##Metricas para cada modelo
+metricas_cm1 <- cm_logit1$byClass
+metricas_cm2 <- cm_logit2$byClass
+metricas_cm3 <- cm_logit3$byClass
+metricas_cm4 <- cm_logit4$byClass
+metricas_cm5 <- cm_logit5$byClass
+Metricas_modelos <-  rbind(metricas_cm1, metricas_cm2, metricas_cm3, metricas_cm4, metricas_cm5)
+
+##ROC curve
+library("ROCR") #Roc
+pred1 <- prediction(train_hogares$y_hat_1, train_hogares$Pobre)
+roc_ROCR1 <- performance(pred1,"tpr","fpr")
+ROC_1 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+abline(a = 0, b = 1)
+
+pred2 <- prediction(train_hogares$y_hat_2, train_hogares$Pobre)
+roc_ROCR2 <- performance(pred2,"tpr","fpr")
+ROC_2 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+abline(a = 0, b = 1)
+
+pred3 <- prediction(train_hogares$y_hat_3, train_hogares$Pobre)
+roc_ROCR3 <- performance(pred3,"tpr","fpr")
+ROC_3 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+abline(a = 0, b = 1)
+
+pred4 <- prediction(train_hogares$y_hat_4, train_hogares$Pobre)
+roc_ROCR4 <- performance(pred4,"tpr","fpr")
+ROC_4 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+abline(a = 0, b = 1)
+
+pred5 <- prediction(train_hogares$y_hat_5, train_hogares$Pobre)
+roc_ROCR5 <- performance(pred5,"tpr","fpr")
+ROC_5 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+abline(a = 0, b = 1)
+
+garrange(pred1, pred2, pred3, pred4, pred5)
+
+##Area under the curve (AUC)
+
+auc_ROCR1 <- performance(pred1, measure = "auc")
+auc ROCR1@y.values[[1]]
+
+auc_ROCR2 <- performance(pred2, measure = "auc")
+auc ROCR2@y.values[[1]]
+
+auc_ROCR3 <- performance(pred3, measure = "auc")
+auc ROCR3@y.values[[1]]
+
+auc_ROCR4 <- performance(pred4, measure = "auc")
+auc ROCR4@y.values[[1]]
+
+auc_ROCR5 <- performance(pred5, measure = "auc")
+auc ROCR5@y.values[[1]]
+
 
 ####----Regression models ---####
 
