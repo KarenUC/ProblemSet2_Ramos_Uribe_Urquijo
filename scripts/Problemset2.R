@@ -177,7 +177,14 @@ box_plot <- ggplot(data=train_hogares , mapping = aes(as.factor(Pobre) , Ingtotu
   geom_boxplot()
 
 box_plot <- box_plot +
-    labs(x= "Pobres", y ="Ingresos Totales Hogar") 
+  scale_fill_grey() + theme_classic()+
+  labs(x= "Pobres", y ="Ingresos Totales Hogar") 
+
+pobre_bar <- ggplot(data = train_hogares, aes(x = Pobre)) +
+  geom_bar(fill="steelblue") +
+  theme_minimal() +
+  labs (x= "Pobre =1", y = "Número de Pobres")
+
 
 
 ############### ------Modelos para pedecir pobreza de los hogares---------############################
@@ -275,13 +282,16 @@ install.packages("corrr")
 library(glmnet)
 library(corrr)
 library(pls)
+
+
 ### ----Ingreso de los hogares
 
 hist(train_hogares$Ingtotugarr)
 
-train_hogares %>% 
-  correlate(method = "pearson") %>% 
-  view()
+df_correlaciones <- train_hogares %>%
+  correlate(method = "pearson") %>%
+  stretch(remove.dups = TRUE)
+
 
 
 # Modelo 1
@@ -304,13 +314,3 @@ forward <- train(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu
 
 
 
-train_hogares$Pobre <- as.factor(train_hogares$Pobre)
-model_log_3 <- glm(Pobre ~  P5130,
-                   family=binomial(link="logit"),
-                   data= train_hogares)
-###Prediccion
-train_hogares$y_hat_3 <- predict(model_log_3 , newdata=train_hogares , type="response")
-summary(train_hogares$y_hat_3 )
-
-
-levels(train_hogares$Pobre)
