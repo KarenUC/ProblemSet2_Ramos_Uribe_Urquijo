@@ -274,17 +274,39 @@ summary(train_hogares$y_hat_3)
 summary(train_hogares$y_hat_4)
 summary(train_hogares$y_hat_5)
 
+## Metricas ##
 
+# Definir regla
 
-#Profe
-model_log_profe <- glm(Pobre ~  P5130,
-                       family=binomial(link="logit"),
-                       data= train_hogares)
-###Prediccion
-train_hogares$y_hat_profe <- predict(model_log_profe , newdata=train_hogares , type="response")
-summary(train_hogares$y_hat_profe )
+rule=0.5
+train_hogares$pobre_prob1 = ifelse(train_hogares$y_hat_1>rule,1,0)
+train_hogares$pobre_prob2 = ifelse(train_hogares$y_hat_2>rule,1,0)
+train_hogares$pobre_prob3 = ifelse(train_hogares$y_hat_3>rule,1,0)
+train_hogares$pobre_prob4 = ifelse(train_hogares$y_hat_4>rule,1,0)
+train_hogares$pobre_prob5 = ifelse(train_hogares$y_hat_5>rule,1,0)
 
+# Matriz clasificación
 
+## logit
+cm_logit1 = confusionMatrix(data=factor(train_hogares$pobre_prob1) , 
+                          reference=factor(train_hogares$Pobre) , 
+                          mode="sens_spec" , positive="1")
+
+cm_logit2 = confusionMatrix(data=factor(train_hogares$pobre_prob2) , 
+                            reference=factor(train_hogares$Pobre) , 
+                            mode="sens_spec" , positive="1")
+
+cm_logit3 = confusionMatrix(data=factor(train_hogares$pobre_prob3) , 
+                            reference=factor(train_hogares$Pobre) , 
+                            mode="sens_spec" , positive="1")
+
+cm_logit4 = confusionMatrix(data=factor(train_hogares$pobre_prob4) , 
+                            reference=factor(train_hogares$Pobre) , 
+                            mode="sens_spec" , positive="1")
+
+cm_logit5 = confusionMatrix(data=factor(train_hogares$pobre_prob5) , 
+                            reference=factor(train_hogares$Pobre) , 
+                            mode="sens_spec" , positive="1")
 
 ####----Regression models ---####
 
