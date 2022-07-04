@@ -35,7 +35,8 @@ p_load(skimr, # summary data
 
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
-setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
 unzip("dataPS2RDS.zip",  list =  T)
 train_hogares<-readRDS("data/train_hogares.Rds")
 train_personas<-readRDS("data/train_personas.Rds")
@@ -170,33 +171,129 @@ train_hogares <- train_hogares[!is.na(train_hogares$max_educ_jh),]
 
 stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "menores", "Ingtot_jh", "max_educ_jh", "num_afsalud" )], type = "text")
 
+### Gráficas estadisticas descriptivas ###
+
+box_plot <- ggplot(data=train_hogares , mapping = aes(as.factor(Pobre) , Ingtotugarr)) + 
+  geom_boxplot()
+
+box_plot <- box_plot +
+    labs(x= "Pobres", y ="Ingresos Totales Hogar") 
+
+
 ############### ------Modelos para pedecir pobreza de los hogares---------############################
 
-##Classification models
+####----Classification models
+
 ##Probabilidad de hogar pobre
 train_hogares$Pobre <-as.factor(train_hogares$Pobre)
-##CreaciÃ³n de variable Vivienda Propia
+
+
+##Creacion de variable Vivienda Propia
 train_hogares$viviendapropia <-as.factor(ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0))
 
-model_log_1 <- glm( Pobre ~ viviendapropia + Nper + Ingtotugarr + total_female + female_jh +
-                  num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
-                  num_afsalud + prod_finan_jh,
-               family=binomial(link="logit"),
-               data= train_hogares
-               )
+class(train_hogares$Pobre)
+
+
+
+set.seed(101010)
+#Modelo 1
+
+model_log_1 <- glm(Pobre ~ factor(viviendapropia) + Nper + Ingtotugarr + total_female + factor(female_jh) +
+                  num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                  num_afsalud + factor(prod_finan_jh),
+                  data= train_hogares,
+                  family=binomial(link="logit"))
+
 summary(model_log_1)
 
 
+#Modelo 2 - Sin productos financieros
+
+model_log_2 <- glm( as.factor(Pobre) ~ viviendapropia + Nper + Ingtotugarr + total_female + female_jh +
+                      num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
+                      num_afsalud,
+                    family=binomial(link="logit"),
+                    data= train_hogares
+)
+summary(model_log_2)
+
+#Modelo 3 - Caracteristicas del Hogar unicamente
+
+model_log_3 <- glm(Pobre ~ viviendapropia + Nper  + total_female  +
+                      num_ocu  + menores  +  num_afsalud,
+                    family=binomial(link="logit"),
+                    data= train_hogares)
+
+summary(model_log_3)
+
+#Modelo 4 - Caracteristicas del JH unicamente
+
+model_log_4 <- glm( Pobre ~  female_jh + edad_jh + Ingtot_jh + max_educ_jh + jh_ocup +
+                     prod_finan_jh,
+                   family=binomial(link="logit"),
+                   data= train_hogares
+)
+
+summary(model_log_4)
 
 
+#Modelo 5 - Transformaciones edad e ingreso
+
+model5 <- as.formula(Pobre ~ viviendapropia + Nper + log(Ingtotugarr+1) + total_female + female_jh +
+                       num_ocu + edad_jh + (edad_jh)^2 + menores + log(Ingtot_jh+1) + max_educ_jh + jh_ocup +
+                       num_afsalud + prod_finan_jh)
+
+model_log_5 <- glm( model5,
+                    family=binomial(link="logit"),
+                    data= train_hogares)
 
 
-##Ingreso de los hogares
-model1<- lm(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
+summary(model_log_5)
+
+
+stargazer(model_log_1, model_log_2, model_log_3, model_log_4, model_log_5, type = "text")
+
+stargazer(model_log_1, model_log_2, model_log_3, model_log_4, model_log_5, type = "latex")
+
+###Predicciones Logit
+
+library("dplyr") #for data wrangling
+library("gamlr") #ML
+
+train_hogares$y_hat_1 <- predict(model_log_1, newdata=train_hogares , type="response")
+train_hogares$y_hat_2 <- predict(model_log_2 , newdata=train_hogares , type="response")
+train_hogares$y_hat_3 <- predict(model_log_3 , newdata=train_hogares , type="response")
+train_hogares$y_hat_4 <- predict(model_log_4 , newdata=train_hogares , type="response")
+train_hogares$y_hat_5 <- predict(model_log_5 , newdata=train_hogares , type="response")
+
+summary(train_hogares$y_hat_3)
+
+####----Regression models ---####
+
+install.packages("glmnet")
+install.packages("corrr")
+library(glmnet)
+library(corrr)
+library(pls)
+### ----Ingreso de los hogares
+
+hist(train_hogares$Ingtotugarr)
+
+train_hogares %>% 
+  correlate(method = "pearson") %>% 
+  view()
+
+
+# Modelo 1
+model1<- lm(Ingtotugarr ~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
                 edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
-                num_afsalud + jh_prod_finan, data= train_hogares
+                num_afsalud + prod_finan_jh, data= train_hogares
                 )
 summary(model1)
+
+
+# Regularizacion
+
 
 
 forward <- train(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu + 
@@ -207,3 +304,13 @@ forward <- train(Ingtotugarr ~ P5090 + Nper + total_female + female_jh + num_ocu
 
 
 
+train_hogares$Pobre <- as.factor(train_hogares$Pobre)
+model_log_3 <- glm(Pobre ~  P5130,
+                   family=binomial(link="logit"),
+                   data= train_hogares)
+###Prediccion
+train_hogares$y_hat_3 <- predict(model_log_3 , newdata=train_hogares , type="response")
+summary(train_hogares$y_hat_3 )
+
+
+levels(train_hogares$Pobre)
