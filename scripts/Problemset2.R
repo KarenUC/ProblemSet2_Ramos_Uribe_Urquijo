@@ -121,10 +121,12 @@ DB$menores<-ifelse(DB$edad<18,1,0)
 DB$max_educ_jh <-ifelse(DB$jh==1,train$P6210s1,0)
 DB$jh_ocup <-ifelse(DB$jh==1,DB$ocu,0)
 DB$afiliado<-ifelse(train$P6090!=1 | is.na(train$P6090),0,1)
-DB$prod_finan_jh<-as.factor(ifelse(train$P7510s5!=1 | is.na(train$P7510s5),0,1))
+DB$prod_finan_jh<-(ifelse(train$P7510s5!=1 | is.na(train$P7510s5),0,1))
 DB$Estrato<-ifelse(DB$jh==1,train$Estrato1,0)
 DB$Ingtot<- train$Ingtot
 DB$Ingtot_jh<-ifelse(DB$jh==1,DB$Ingtot, 0)
+
+
 
 DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
                                               female_jh = sum(female_jh),
@@ -135,7 +137,8 @@ DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
                                               max_educ_jh= sum( max_educ_jh), 
                                               jh_ocup= sum(jh_ocup),
                                               num_afsalud = sum(afiliado),
-                                              jh_estrato=sum(Estrato)
+                                              jh_estrato=sum(Estrato),
+                                              prod_finan_jh=sum(prod_finan_jh)
                                               ) 
 
 
@@ -198,7 +201,7 @@ set.seed(101010)
 
 model_log_1 <- glm(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
                   num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
-                  num_afsalud,
+                  num_afsalud + prod_finan_jh,
                   data= train_hogares,
                   family=binomial(link="logit"))
 
@@ -226,8 +229,7 @@ summary(model_log_3)
 
 #Modelo 4 - Caracteristicas del JH unicamente
 
-model_log_4 <- glm( Pobre ~  female_jh + edad_jh + Ingtot_jh + max_educ_jh + jh_ocup +
-                     prod_finan_jh,
+model_log_4 <- glm( Pobre ~  female_jh + edad_jh + Ingtot_jh + max_educ_jh + jh_ocup + prod_finan_jh,
                    family=binomial(link="logit"),
                    data= train_hogares
 )
@@ -239,7 +241,7 @@ summary(model_log_4)
 
 model5 <- as.formula(Pobre ~ viviendapropia + total_female + female_jh +
                        num_ocu + edad_jh + (edad_jh)^2 + menores + log(Ingtot_jh+1) + max_educ_jh + jh_ocup +
-                       num_afsalud + prod_finan_jh)
+                       num_afsalud +  prod_finan_jh)
 
 model_log_5 <- glm( model5,
                     family=binomial(link="logit"),
