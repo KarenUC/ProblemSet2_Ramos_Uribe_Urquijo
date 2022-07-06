@@ -324,33 +324,49 @@ metricas_cm5 <- cm_logit5$byClass
 Metricas_modelos <-  rbind(metricas_cm1, metricas_cm2, metricas_cm3, metricas_cm4, metricas_cm5)
 
 ##ROC curve
-library("ROCR") #Roc
+
+library(ggplot2)
+library(pROC)
+
+
 pred1 <- prediction(train_hogares$y_hat_1, train_hogares$Pobre)
-roc_ROCR1 <- performance(pred1,"tpr","fpr")
-ROC_1 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+roc_ROCR2 <- performance(pred1,"tpr","fpr")
+ROC_1 <- plot(roc_ROCR1, main = "ROC curve", colorize = F)
 abline(a = 0, b = 1)
 
 pred2 <- prediction(train_hogares$y_hat_2, train_hogares$Pobre)
 roc_ROCR2 <- performance(pred2,"tpr","fpr")
-ROC_2 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+ROC_2 <- plot(roc_ROCR2, main = "ROC curve", colorize = F)
 abline(a = 0, b = 1)
 
 pred3 <- prediction(train_hogares$y_hat_3, train_hogares$Pobre)
 roc_ROCR3 <- performance(pred3,"tpr","fpr")
-ROC_3 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+ROC_3 <- plot(roc_ROCR3, main = "ROC curve", colorize = F)
 abline(a = 0, b = 1)
 
 pred4 <- prediction(train_hogares$y_hat_4, train_hogares$Pobre)
 roc_ROCR4 <- performance(pred4,"tpr","fpr")
-ROC_4 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+ROC_4 <- plot(roc_ROCR4, main = "ROC curve", colorize = F)
 abline(a = 0, b = 1)
 
 pred5 <- prediction(train_hogares$y_hat_5, train_hogares$Pobre)
 roc_ROCR5 <- performance(pred5,"tpr","fpr")
-ROC_5 <- plot(roc_ROCR, main = "ROC curve", colorize = T)
+ROC_5 <- plot(roc_ROCR5, main = "ROC curve", colorize = F)
 abline(a = 0, b = 1)
 
-ggarrange(pred1, pred2, pred3, pred4, pred5)
+
+par(mfrow=c(3,2))
+ROC_1 <- plot(roc_ROCR1, main = "ROC curve", colorize = F)
+abline(a = 0, b = 1)
+ROC_2 <- plot(roc_ROCR2, main = "ROC curve", colorize = F)
+abline(a = 0, b = 1)
+ROC_3 <- plot(roc_ROCR3, main = "ROC curve", colorize = F)
+abline(a = 0, b = 1)
+ROC_4 <- plot(roc_ROCR4, main = "ROC curve", colorize = F)
+abline(a = 0, b = 1)
+ROC_5 <- plot(roc_ROCR5, main = "ROC curve", colorize = F)
+abline(a = 0, b = 1)
+
 
 ##Area under the curve (AUC)
 
@@ -368,6 +384,57 @@ auc_ROCR4@y.values[[1]]
 
 auc_ROCR5 <- performance(pred5, measure = "auc")
 auc_ROCR5@y.values[[1]]
+
+
+
+### Curvas ROC y AUC otro intento ###
+
+install.packages("plotROC")
+library(plotROC)
+
+roc1 <- roc(train_hogares$Pobre, train_hogares$y_hat_1)
+auc1 <- round(auc(train_hogares$Pobre, train_hogares$y_hat_1),4)
+model1 <- paste('Model 1 (AUC=',toString(round(auc1,2)),')',sep = '')
+
+roc2 <- roc(train_hogares$Pobre, train_hogares$y_hat_2)
+auc2 <- round(auc(train_hogares$Pobre, train_hogares$y_hat_2),4)
+model2 <- paste('Model 2 (AUC=',toString(round(auc2,2)),')',sep = '')
+
+
+roc3 <- roc(train_hogares$Pobre, train_hogares$y_hat_3)
+auc3 <- round(auc(train_hogares$Pobre, train_hogares$y_hat_3),4)
+model3 <- paste('Model 3 (AUC=',toString(round(auc3,2)),')',sep = '')
+
+roc4 <- roc(train_hogares$Pobre, train_hogares$y_hat_4)
+auc4 <- round(auc(train_hogares$Pobre, train_hogares$y_hat_4),4)
+model4 <- paste('Model 4 (AUC=',toString(round(auc4,2)),')',sep = '')
+
+roc5 <- roc(train_hogares$Pobre, train_hogares$y_hat_5)
+auc5 <- round(auc(train_hogares$Pobre, train_hogares$y_hat_5),4)
+model5 <- paste('Model 5 (AUC=',toString(round(auc5,2)),')',sep = '')
+
+# Create an empty figure, and iteratively add a line for each class
+install.packages("plotly")
+install.packages("tidymodels")
+install.packages("fastDummies")
+
+library(plotly)
+library(tidymodels)
+library(fastDummies)
+
+fig <- plot_ly()%>%
+  add_segments(x = 0, xend = 1, y = 0, yend = 1, line = list(dash = "dash", color = 'black'), showlegend = FALSE) %>%
+  add_trace(data = roc1, x = (1-roc1$specificities), y = roc1$sensitivities, mode = 'lines', name = model1, type = 'scatter')%>%
+  add_trace(data = roc2 ,x = (1-roc2$specificities), y = roc2$sensitivities, mode = 'lines', name = model2, type = 'scatter')%>%
+  add_trace(data = roc3 ,x = (1-roc3$specificities), y = roc3$sensitivities, mode = 'lines', name = model3, type = 'scatter')%>%
+  add_trace(data = roc4 ,x = (1-roc4$specificities), y = roc4$sensitivities, mode = 'lines', name = model4, type = 'scatter')%>%
+  add_trace(data = roc5 ,x = (1-roc5$specificities), y = roc5$sensitivities, mode = 'lines', name = model5, type = 'scatter')%>%
+    layout(xaxis = list(
+    title = "False Positive Rate"
+  ), yaxis = list(
+    title = "True Positive Rate"
+  ),legend = list(x = 100, y = 0.5))
+fig
 
 ###############################################################################
 ###############################################################################
