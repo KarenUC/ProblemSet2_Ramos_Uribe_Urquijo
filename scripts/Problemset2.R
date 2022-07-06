@@ -30,8 +30,8 @@ p_load(skimr, # summary data
 
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
-setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
-#setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
 #setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
 
 unzip("dataPS2RDS.zip",  list =  T)
@@ -166,8 +166,20 @@ train_hogares = train_hogares %>%
 #Eliminar NA en max_edu_jh
 train_hogares <- train_hogares[!is.na(train_hogares$max_educ_jh),]
 
+#Tabla estadísticas descriptivas - Variables Numéricas
 
-stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu", "menores", "Ingtot_jh", "max_educ_jh", "num_afsalud" )], type = "text")
+library(stargazer)
+
+stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu")], type = "text") 
+stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu")], type = "latex") 
+
+stargazer(train_hogares[c("menores", "Ingtot_jh", "max_educ_jh", "num_afsalud")], type = "text")
+stargazer(train_hogares[c("menores", "Ingtot_jh", "max_educ_jh", "num_afsalud")], type = "latex")
+
+count(train_hogares$menores)
+
+summary(train_hogares$menores)
+summary(train_hogares$Nper)
 
 ### Gr?ficas estadisticas descriptivas ###
 
