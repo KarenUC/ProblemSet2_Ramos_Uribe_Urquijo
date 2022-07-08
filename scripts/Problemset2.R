@@ -556,10 +556,18 @@ result_lassosens<- logit_lasso_sens[["results"]][100,-1]
 results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens)
 ###El mejor modelo es el Modelo logit de acuerdo con el ROC
 
+###Determinar el Cutoff
+evaluation
 evalResults <- data.frame(Pobre = evaluation$Pobre)
-evalResults$Roc <- predict(mylogit_lasso_roc,
+evalResults$Roc <- predict(logit_caret_pob,
                            newdata = evaluation,
                            type = "prob")[,1]
+library(pROC)
+rfROC <- roc(evalResults$Pobre, evalResults$Roc, levels = rev(levels(evalResults$Pobre)))
+rfROC
+rfThresh <- coords(rfROC, x = "best", best.method = "closest.topleft")
+rfThresh
+
 
 
 
