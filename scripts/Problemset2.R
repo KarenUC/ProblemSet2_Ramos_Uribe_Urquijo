@@ -1,5 +1,5 @@
 # Paula Ramos, Karen Uribe y Juan D. Urquijo
-# update: 04-07-2022
+# update: 07-07-2022
 ###----------------- Project Set 2----------###
 
 ##### ---Limpiar Ambiente --- ######
@@ -31,8 +31,8 @@ p_load(skimr, # summary data
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
 #setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
-setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
-#setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
 
 unzip("dataPS2RDS.zip",  list =  T)
 train_hogares<-readRDS("data/train_hogares.Rds")
@@ -166,7 +166,10 @@ train_hogares = train_hogares %>%
 #Eliminar NA en max_edu_jh
 train_hogares <- train_hogares[!is.na(train_hogares$max_educ_jh),]
 
-#Tabla estad�sticas descriptivas - Variables Num�ricas
+##Creacion de variable Vivienda Propia
+train_hogares$viviendapropia <-as.factor(ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0))
+
+#Tabla estad?sticas descriptivas - Variables Num?ricas
 
 library(stargazer)
 
@@ -176,10 +179,15 @@ stargazer(train_hogares[c("Nper", "Ingtotugarr", "total_female", "num_ocu")], ty
 stargazer(train_hogares[c("menores", "Ingtot_jh", "max_educ_jh", "num_afsalud")], type = "text")
 stargazer(train_hogares[c("menores", "Ingtot_jh", "max_educ_jh", "num_afsalud")], type = "latex")
 
-count(train_hogares$menores)
 
-summary(train_hogares$menores)
-summary(train_hogares$Nper)
+install.packages("gtsummary")
+library(gtsummary)
+library(tidyverse)
+train_hogares %>%
+  select(female_jh, jh_ocup, viviendapropia) %>%
+  tbl_summary() %>%
+  as_gt() %>%
+  gt::as_latex()
 
 ### Gr?ficas estadisticas descriptivas ###
 
@@ -201,13 +209,6 @@ pobre_bar <- ggplot(data = train_hogares, aes(x = Pobre, fill=Pobre)) +
 
 ##Probabilidad de hogar pobre
 train_hogares$Pobre <-as.factor(train_hogares$Pobre)
-
-
-##Creacion de variable Vivienda Propia
-train_hogares$viviendapropia <-as.factor(ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0))
-
-class(train_hogares$Pobre)
-
 
 
 set.seed(101010)
@@ -268,8 +269,6 @@ summary(model_log_5)
 stargazer(model_log_1, model_log_2, model_log_3, model_log_4, model_log_5, type = "text")
 
 stargazer(model_log_1, model_log_2, model_log_3, model_log_4, model_log_5, type = "latex")
-
-
 
 ###Predicciones Logit
 
@@ -339,7 +338,6 @@ Metricas_modelos <-  rbind(metricas_cm1, metricas_cm2, metricas_cm3, metricas_cm
 
 library(ggplot2)
 library(pROC)
-
 
 pred1 <- prediction(train_hogares$y_hat_1, train_hogares$Pobre)
 roc_ROCR2 <- performance(pred1,"tpr","fpr")
@@ -447,6 +445,123 @@ fig <- plot_ly()%>%
     title = "True Positive Rate"
   ),legend = list(x = 100, y = 0.5))
 fig
+
+require(caret)
+
+train_hogares$Pobre<- factor((train_hogares$Pobre), 
+                             levels = c(0, 1), 
+                             labels = c("No", "si"))
+
+matriz_trainhog <- model.matrix(Pobre ~ .^2, data=train_hogares)[,-1]
+## División del balance de clases para evitar overfitting
+## Entrenamiento
+set.seed(123)
+split1 <- createDataPartition(train_hogares$Pobre, p = .7)[[1]]
+length(split1)
+## Prueba y evaluación
+other <- train_hogares[-split1,]
+training <- train_hogares[ split1,]
+set.seed(123)
+split2 <- createDataPartition(other$Pobre, p = 1/3)[[1]]
+evaluation <- other[ split2,]
+testing <- other[-split2,]
+
+dim(training)
+dim(evaluation)
+dim(testing)
+
+summary(training$Pobre)
+
+##Modelo seleccionado: Modelo 1
+#Modelo logit Cross validation
+fiveStats <- function(...) c(twoClassSummary(...), defaultSummary(...))
+
+ctrl_pobre <- trainControl(method = "cv",
+                         number = 5,
+                         summaryFunction = fiveStats,
+                         classProbs = TRUE,
+                         verbose=FALSE,
+                         savePredictions = T)
+
+logit_caret_pob <- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
+                           num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                             num_afsalud + prod_finan_jh,
+                           data = training,
+                           method = "glm",
+                           trControl = ctrl_pobre,
+                           family = "binomial",
+                           preProcess = c("center", "scale")
+)
+
+logit_caret_pob
+
+#Modelo logit lasso Cross validation
+
+lambda_grid <- 10^seq(-4, 0.01, length = 100)
+lambda_grid
+set.seed(123)
+logit_lasso<- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
+                             num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                             num_afsalud + prod_finan_jh,
+                    data = training,
+                    method = "glmnet",
+                    trControl = ctrl_pobre,
+                    family = "binomial",
+                    metric = "Accuracy",
+                    tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
+                    preProcess = c("center", "scale")
+)
+logit_lasso
+
+logit_lasso[["bestTune"]]
+### Posiciòn 54 - Mejor lambda = 0.01402063
+
+### Modelo lasso Roc
+logit_lasso_ROC<- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
+                      num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                      num_afsalud + prod_finan_jh,
+                    data = training,
+                    method = "glmnet",
+                    trControl = ctrl_pobre,
+                    family = "binomial",
+                    metric = "ROC",
+                    tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
+                    preProcess = c("center", "scale")
+)
+logit_lasso_ROC
+logit_lasso_ROC[["bestTune"]]
+
+### Modelo lasso Sens
+logit_lasso_sens<- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
+                          num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                          num_afsalud + prod_finan_jh,
+                        data = training,
+                        method = "glmnet",
+                        trControl = ctrl_pobre,
+                        family = "binomial",
+                        metric = "Sens",
+                        tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
+                        preProcess = c("center", "scale")
+)
+logit_lasso_sens
+logit_lasso_sens[["bestTune"]]
+
+
+###Resultados de las métricas 
+result_logitcv <- logit_caret_pob[["results"]]
+colnames(result_logitcv)[1]<-"lambda"
+result_lassoacc <- logit_lasso[["results"]][54,-1]
+result_lassoroc<- logit_lasso_ROC[["results"]][54,-1]
+result_lassosens<- logit_lasso_sens[["results"]][100,-1]
+results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens)
+###El mejor modelo es el Modelo logit de acuerdo con el ROC
+
+evalResults <- data.frame(Pobre = evaluation$Pobre)
+evalResults$Roc <- predict(mylogit_lasso_roc,
+                           newdata = evaluation,
+                           type = "prob")[,1]
+
+
 
 ###############################################################################
 ###############################################################################
