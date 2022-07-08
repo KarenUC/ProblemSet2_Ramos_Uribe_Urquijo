@@ -95,7 +95,85 @@ variables_eliminar <- cantidad_na$variable[filtro]
 train <- train %>% 
   select(-variables_eliminar)
 
+####################################################################################################
+#Qué variables están en la base train y test
+x <- ls(train)
+y <- ls(test)
+Coincidencias <- list()
 
+for(i in 1:length(y)){
+  for(j in 1:length(x)){
+    if (y[i]==x[j]){
+      Coincidencias <- append(Coincidencias, y[i])
+    }
+  }
+}
+Coincidencias
+####################################################################################################
+################################# Limpieza de Test #############################################
+
+### --- 2. a) Data Cleaning --- ###
+### --- Missing Values
+
+# Sacar cantidad de NAs por variable
+cantidad_na_test <- sapply(test, function(x) sum(is.na(x)))
+cantidad_na_test <- data.frame(cantidad_na_test)
+cantidad_na_test<- data.frame(cantidad_na_test)%>%
+  rownames_to_column("variable")
+cantidad_na_test$porcentaje_na <- cantidad_na_test$cantidad_na/nrow(train)
+
+# Eliminamos variables que no aportan
+filtro <- cantidad_na_test$porcentaje_na > 0.85
+variables_eliminar_test <- cantidad_na_test$variable[filtro]
+test <- test %>% 
+  select(-variables_eliminar_test)
+
+### ----- Escoger variables que nos sirven para hacer el modelo -----####
+
+#Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
+#genero_jef(P6020), ocupado (Oc), educación(P6210, P6210s1),desocupado (Des), 
+#ingreso (Ingtot)
+
+#Características de Individuo:
+#Edad(P6040), educación(P6210, P6210s1), salud(P6090), ahorro(P7510s5), genero(P6020)
+#desocupado (Des), ingreso (Ingtot)
+
+#Caracteristicas del hogar:
+#Vivienda propia (P5090), total personas en el hogar (), choques a salud(P6240, opción 5),
+#choques ,ingreso (Ingtotugarr) 
+
+female_test<-ifelse(test$P6020==2,1,0)
+jh_test<-ifelse(test$P6050==1,1,0)
+id<-test$id
+DB_test<-data_frame(id,female_test,jh_test)
+
+DB_test$female_jh<-ifelse(DB_test$jh_test==1,DB_test$female_test,0)
+DB_test$ocu<-ifelse(is.na(test$Oc),0,1)
+DB_test$edad<-test$P6040
+DB_test$edad_jh<-ifelse(DB_test$jh_test==1,test$P6040,0)
+DB_test$menores<-ifelse(DB_test$edad<18,1,0)
+DB_test$max_educ_jh <-ifelse(DB_test$jh_test==1,test$P6210s1,0)
+DB_test$jh_ocup <-ifelse(DB_test$jh_test==1,DB_test$ocu,0)
+DB_test$afiliado<-ifelse(test$P6090!=1 | is.na(test$P6090),0,1)
+DB_test$prod_finan_jh<-(ifelse(test$P7510s5!=1 | is.na(test$P7510s5),0,1))
+
+DB_2_test<-DB_test %>% group_by(id) %>% summarise(total_female = sum(female_test),
+                                        female_jh = sum(female_jh),
+                                        num_ocu = sum(ocu),
+                                        edad_jh = sum(edad_jh),
+                                        menores= sum(menores),
+                                        max_educ_jh= sum( max_educ_jh), 
+                                        jh_ocup= sum(jh_ocup),
+                                        num_afsalud = sum(afiliado),
+                                        prod_finan_jh=sum(prod_finan_jh)
+) 
+
+
+test_hogares <-test_hogares %>% left_join(DB_2_test,by="id")
+
+test_hogares$viviendapropia <-as.factor(ifelse (test_hogares$P5090==1 | test_hogares$P5090==2,1,0))
+
+########################################################################################################################################
 ### ----- Escoger variables que nos sirven para hacer el modelo -----####
 
 #Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
@@ -214,8 +292,8 @@ train_hogares$Pobre <-as.factor(train_hogares$Pobre)
 set.seed(101010)
 #Modelo 1
 
-model_log_1 <- glm(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
-                  num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+model_log_1 <- glm(Pobre ~ viviendapropia + total_female + female_jh +
+                  num_ocu + edad_jh + menores + max_educ_jh + jh_ocup +
                   num_afsalud + prod_finan_jh,
                   data= train_hogares,
                   family=binomial(link="logit"))
@@ -225,8 +303,8 @@ summary(model_log_1)
 
 #Modelo 2 - Sin productos financieros
 
-model_log_2 <- glm( as.factor(Pobre) ~ viviendapropia + total_female + female_jh +
-                      num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
+model_log_2 <- glm( Pobre ~ viviendapropia + total_female + female_jh +
+                      num_ocu + edad_jh + menores + max_educ_jh + jh_ocup +
                       num_afsalud,
                     family=binomial(link="logit"),
                     data= train_hogares
@@ -244,7 +322,7 @@ summary(model_log_3)
 
 #Modelo 4 - Caracteristicas del JH unicamente
 
-model_log_4 <- glm( Pobre ~  female_jh + edad_jh + Ingtot_jh + max_educ_jh + jh_ocup + prod_finan_jh,
+model_log_4 <- glm( Pobre ~  female_jh + edad_jh + max_educ_jh + jh_ocup + prod_finan_jh,
                    family=binomial(link="logit"),
                    data= train_hogares
 )
@@ -252,10 +330,11 @@ model_log_4 <- glm( Pobre ~  female_jh + edad_jh + Ingtot_jh + max_educ_jh + jh_
 summary(model_log_4)
 
 
-#Modelo 5 - Transformaciones edad e ingreso
+#Modelo 5 - Transformaciones edad
+train_hogares$edad_jh2<-(train_hogares$edad_jh)^2
 
 model5 <- as.formula(Pobre ~ viviendapropia + total_female + female_jh +
-                       num_ocu + edad_jh + (edad_jh)^2 + menores + log(Ingtot_jh+1) + max_educ_jh + jh_ocup +
+                       num_ocu + edad_jh + edad_jh2 + menores + max_educ_jh + jh_ocup +
                        num_afsalud +  prod_finan_jh)
 
 model_log_5 <- glm( model5,
@@ -339,64 +418,6 @@ Metricas_modelos <-  rbind(metricas_cm1, metricas_cm2, metricas_cm3, metricas_cm
 library(ggplot2)
 library(pROC)
 
-pred1 <- prediction(train_hogares$y_hat_1, train_hogares$Pobre)
-roc_ROCR2 <- performance(pred1,"tpr","fpr")
-ROC_1 <- plot(roc_ROCR1, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-
-pred2 <- prediction(train_hogares$y_hat_2, train_hogares$Pobre)
-roc_ROCR2 <- performance(pred2,"tpr","fpr")
-ROC_2 <- plot(roc_ROCR2, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-
-pred3 <- prediction(train_hogares$y_hat_3, train_hogares$Pobre)
-roc_ROCR3 <- performance(pred3,"tpr","fpr")
-ROC_3 <- plot(roc_ROCR3, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-
-pred4 <- prediction(train_hogares$y_hat_4, train_hogares$Pobre)
-roc_ROCR4 <- performance(pred4,"tpr","fpr")
-ROC_4 <- plot(roc_ROCR4, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-
-pred5 <- prediction(train_hogares$y_hat_5, train_hogares$Pobre)
-roc_ROCR5 <- performance(pred5,"tpr","fpr")
-ROC_5 <- plot(roc_ROCR5, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-
-
-par(mfrow=c(3,2))
-ROC_1 <- plot(roc_ROCR1, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-ROC_2 <- plot(roc_ROCR2, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-ROC_3 <- plot(roc_ROCR3, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-ROC_4 <- plot(roc_ROCR4, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-ROC_5 <- plot(roc_ROCR5, main = "ROC curve", colorize = F)
-abline(a = 0, b = 1)
-
-
-##Area under the curve (AUC)
-
-auc_ROCR1 <- performance(pred1, measure = "auc")
-auc_ROCR1@y.values[[1]]
-
-auc_ROCR2 <- performance(pred2, measure = "auc")
-auc_ROCR2@y.values[[1]]
-
-auc_ROCR3 <- performance(pred3, measure = "auc")
-auc_ROCR3@y.values[[1]]
-
-auc_ROCR4 <- performance(pred4, measure = "auc")
-auc_ROCR4@y.values[[1]]
-
-auc_ROCR5 <- performance(pred5, measure = "auc")
-auc_ROCR5@y.values[[1]]
-
-
-
 ### Curvas ROC y AUC otro intento ###
 
 install.packages("plotROC")
@@ -452,7 +473,6 @@ train_hogares$Pobre<- factor((train_hogares$Pobre),
                              levels = c(0, 1), 
                              labels = c("No", "si"))
 
-matriz_trainhog <- model.matrix(Pobre ~ .^2, data=train_hogares)[,-1]
 ## División del balance de clases para evitar overfitting
 ## Entrenamiento
 set.seed(123)
@@ -484,7 +504,7 @@ ctrl_pobre <- trainControl(method = "cv",
                          savePredictions = T)
 
 logit_caret_pob <- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
-                           num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                           num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
                              num_afsalud + prod_finan_jh,
                            data = training,
                            method = "glm",
@@ -501,7 +521,7 @@ lambda_grid <- 10^seq(-4, 0.01, length = 100)
 lambda_grid
 set.seed(123)
 logit_lasso<- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
-                             num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                             num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
                              num_afsalud + prod_finan_jh,
                     data = training,
                     method = "glmnet",
@@ -514,11 +534,11 @@ logit_lasso<- train(Pobre ~ factor(viviendapropia) + total_female + factor(femal
 logit_lasso
 
 logit_lasso[["bestTune"]]
-### Posiciòn 54 - Mejor lambda = 0.01402063
+### Posiciòn 55 - Mejor lambda = 0.01539121
 
 ### Modelo lasso Roc
 logit_lasso_ROC<- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
-                      num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                      num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
                       num_afsalud + prod_finan_jh,
                     data = training,
                     method = "glmnet",
@@ -533,7 +553,7 @@ logit_lasso_ROC[["bestTune"]]
 
 ### Modelo lasso Sens
 logit_lasso_sens<- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
-                          num_ocu + edad_jh + menores + Ingtot_jh + max_educ_jh + factor(jh_ocup) +
+                          num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
                           num_afsalud + prod_finan_jh,
                         data = training,
                         method = "glmnet",
@@ -568,6 +588,59 @@ rfROC
 rfThresh <- coords(rfROC, x = "best", best.method = "closest.topleft")
 rfThresh
 
+evalResults <- evalResults %>% mutate(hat_pobre_05=ifelse(evalResults$Roc>0.5,"Si","No"),
+                                    hat_pobre_rfThresh=ifelse(evalResults$Roc>rfThresh$threshold,"Si","No"))
+
+with(evalResults,table(Pobre,hat_pobre_05))
+with(evalResults,table(Pobre,hat_pobre_rfThresh))
+
+#se prefiere hat_pobre_05 porque le atina a más pobres
+
+############## ----- Evaluación en la muestra de prueba ------ #####################
+
+testResults <- data.frame(Pobre = testing$Pobre)
+
+summary(testing$Pobre)
+
+testResults$logit<- predict(logit_caret_pob,
+                            newdata = testing,
+                            type = "prob")[,1]
+
+hist(testResults$logit)
+
+testResults$lasso<- predict(logit_lasso,
+                            newdata = testing,
+                            type = "prob")[,1]
+
+testResults$lasso_roc<- predict(logit_lasso_ROC,
+                                   newdata = testing,
+                                   type = "prob")[,1]
+
+testResults$lasso_sens<- predict(logit_lasso_sens,
+                                     newdata = testing,
+                                     type = "prob")[,1]
+
+testResults<-testResults %>%
+  mutate(logit=ifelse(logit>rfThresh$threshold,"Si","No"),
+         lasso=ifelse(lasso>rfThresh$threshold,"Si","No"),
+         lasso_roc =ifelse(lasso_roc>rfThresh$threshold,"Si","No"),
+         lasso_sens=ifelse(lasso_sens>rfThresh$threshold,"Si","No"),
+          )
+
+with(testResults,table(Pobre,logit))
+with(testResults,table(Pobre,lasso))
+with(testResults,table(Pobre,lasso_roc))
+with(testResults,table(Pobre,lasso_sens))
+
+##### Ahora con base test
+
+testResults_final <- data.frame(Pobre = test_hogares$Pobre)
+
+summary(testing$Pobre)
+### arreglar 
+testResults_final$logit<- predict(logit_caret_pob,
+                            newdata = test_hogares,
+                            type = "prob")[,1]
 
 
 
@@ -582,84 +655,8 @@ library(glmnet)
 library(corrr)
 library(pls)
 
-##### Test data ##############
-
-
-### --- 2. a) Data Cleaning --- ###
-### --- Missing Values
-
-# Sacar cantidad de NAs por variable
-cantidad_na_test <- sapply(test, function(x) sum(is.na(x)))
-cantidad_na_test <- data.frame(cantidad_na_test)
-cantidad_na_test<- data.frame(cantidad_na_test)%>%
-rownames_to_column("variable")
-cantidad_na_test$porcentaje_na <- cantidad_na_test$cantidad_na/nrow(train)
-
-
-
-# Eliminamos variables que no aportan
-filtro <- cantidad_na_test$porcentaje_na > 0.85
-variables_eliminar_test <- cantidad_na_test$variable[filtro]
-test <- test %>% 
-  select(-variables_eliminar_test)
-
-
-### ----- Escoger variables que nos sirven para hacer el modelo -----####
-
-#Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
-#genero_jef(P6020), ocupado (Oc), educación(P6210, P6210s1),desocupado (Des), 
-#ingreso (Ingtot)
-
-#Características de Individuo:
-#Edad(P6040), educación(P6210, P6210s1), salud(P6090), ahorro(P7510s5), genero(P6020)
-#desocupado (Des), ingreso (Ingtot)
-
-#Caracteristicas del hogar:
-#Vivienda propia (P5090), total personas en el hogar (), choques a salud(P6240, opción 5),
-#choques ,ingreso (Ingtotugarr) 
-
-female<-ifelse(test$P6020==2,1,0)
-jh<-ifelse(test$P6050==1,1,0)
-id<-test$id
-DB_test<-data_frame(id,female,jh)
-
-DB_test$female_jh<-ifelse(DB_test$jh==1,DB$female,0)
-DB_test$ocu<-ifelse(is.na(test$Oc),0,1)
-DB_test$edad<-test$P6040
-DB_test$edad_jh<-ifelse(DB_test$jh==1,test$P6040,0)
-DB_test$menores<-ifelse(DB_test$edad<18,1,0)
-DB_test$max_educ_jh <-ifelse(DB_test$jh==1,test$P6210s1,0)
-DB_test$jh_ocup <-ifelse(DB_test$jh==1,DB_test$ocu,0)
-DB_test$afiliado<-ifelse(test$P6090!=1 | is.na(test$P6090),0,1)
-DB_test$prod_finan_jh<-(ifelse(test$P7510s5!=1 | is.na(test$P7510s5),0,1))
-
-DB_test$Estrato<-ifelse(DB_test$jh==1,test$Estrato1,0)
-
-
-DB_test$Ingtot<- test$Ingtot
-DB_test$Ingtot_jh<-ifelse(DB_test$jh==1,DB_test$Ingtot, 0)
-
-
-
-DB_2<-DB %>% group_by(id) %>% summarise(total_female = sum(female),
-                                        female_jh = sum(female_jh),
-                                        num_ocu = sum(ocu),
-                                        edad_jh = sum(edad_jh),
-                                        menores= sum(menores),
-                                        Ingtot_jh = sum(Ingtot_jh),
-                                        max_educ_jh= sum( max_educ_jh), 
-                                        jh_ocup= sum(jh_ocup),
-                                        num_afsalud = sum(afiliado),
-                                        jh_estrato=sum(Estrato),
-                                        prod_finan_jh=sum(prod_finan_jh)
-) 
-
-
-train_hogares <-train_hogares %>% left_join(DB_2,by="id")
-
-
-
-test_hogares$viviendapropia <-as.factor(ifelse (test_hogares$P5090==1 | test_hogares$P5090==2,1,0))
+###############################################################################
+####################### Modelos de regresion lineal ####################################
 
 ###############################################################################
 ### ----Ingreso de los hogares---- #####
