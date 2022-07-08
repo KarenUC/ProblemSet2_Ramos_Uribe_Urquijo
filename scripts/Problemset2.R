@@ -634,17 +634,9 @@ with(testResults,table(Pobre,lasso_sens))
 
 ##### Ahora con base test
 
-testResults_final <- data.frame(Pobre = test_hogares$Pobre)
+test_hogares$Pobre_predicho_final<-predict(logit_caret_pob,newdata=test_hogares)
 
-summary(testing$Pobre)
-### arreglar 
-testResults_final$logit<- predict(logit_caret_pob,
-                            newdata = test_hogares,
-                            type = "prob")[,1]
-
-
-
-###############################################################################
+##############################################################################
 ###############################################################################
 
 ####----Regression models ---####
