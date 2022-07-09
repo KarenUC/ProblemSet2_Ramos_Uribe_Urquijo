@@ -30,8 +30,8 @@ p_load(skimr, # summary data
 
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
-#setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
-setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
 #setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
 
 unzip("dataPS2RDS.zip",  list =  T)
@@ -182,7 +182,7 @@ test_hogares <- test_hogares[!is.na(test_hogares$max_educ_jh),]
 ########################################################################################################################################
 ### ----- Escoger variables que nos sirven para hacer el modelo -----####
 
-#Decidimos hacerlo v�a dos partes: Caracteristicas del jefe del hogar y caracteristicas propias del hogar 
+#Decidimos hacerlo v?a dos partes: Caracteristicas del jefe del hogar y caracteristicas propias del hogar 
 
 #Caracteristicas del jefe del hogar (P6050- Opción 1 es jefe del hogar - parentesco con jefe del hogar)
 #genero_jef(P6020), ocupado (Oc), educación(P6210, P6210s1),desocupado (Des), 
@@ -289,12 +289,12 @@ box_plot2 <- box_plot2 +
   scale_fill_grey() + theme_classic()+
   labs(x= "Pobres", y =" Logaritmo Ingresos Totales Hogar")
 
-ing_graph <- ggarrange(box_plot, box_plot2) ## Para incluir en el an�lisis
+ing_graph <- ggarrange(box_plot, box_plot2) ## Para incluir en el an?lisis
 
 pobre_bar <- ggplot(data = train_hogares, aes(x = Pobre, fill=Pobre)) +
   geom_bar() +
   labs (subtitle="Base de Entrenamiento",
-        x= "Pobre = 1", y = "N�mero de Pobres")
+        x= "Pobre = 1", y = "N?mero de Pobres")
 
 total_graphs <- ggarrange(pobre_bar, ing_graph)
 
@@ -655,28 +655,14 @@ with(testResults,table(Pobre,lasso))
 with(testResults,table(Pobre,lasso_roc))
 with(testResults,table(Pobre,lasso_sens))
 
-##  Una vez escogemos el modelo, basados en que es preferible identificar en las predicciones la mayor cantidad de Pobres (S�). 
-##  Procedemos a realizar la predicci�n final de la variable categ�rica en la base de Test. 
+##  Una vez escogemos el modelo, basados en que es preferible identificar en las predicciones la mayor cantidad de Pobres (S?). 
+##  Procedemos a realizar la predicci?n final de la variable categ?rica en la base de Test. 
 
 test_hogares$Pobre_predicho_final<-predict(logit_caret_pob,newdata=test_hogares)
 
-#Prediccion final Modelo Clasificaci�n
+#Prediccion final Modelo Clasificaci?n
 
 summary(test_hogares$Pobre_predicho_final)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ##############################################################################
 ###############################################################################
@@ -689,53 +675,252 @@ library(glmnet)
 library(corrr)
 library(pls)
 
-
-
-
-
-
-
-
-
 ###############################################################################
 ####################### Modelos de regresion lineal ####################################
 
 ###############################################################################
 ### ----Ingreso de los hogares---- #####
 
-hist(train_hogares$Ingtotugarr)
+#hist(train_hogares$Ingtotugarr)
+m <- mean(train_hogares$Ingtotugarr)
+sd <- sd(train_hogares$Ingtotugarr)
+train_hogares$Ingtotugarr_scale <- scale(train_hogares$Ingtotugarr, center = TRUE, scale = TRUE)
+ 
+train_hogares$Ingtotugarr_unscale <- (train_hogares$Ingtotugarr_scale * sd) + m 
 
-train_hogares$Ingtotugarr<-scale(train_hogares$Ingtotugarr)
+train_hogares$Ingtotugarr_unscale == train_hogares$Ingtotugarr
+
+unscaled_x <- (scaled_x * sd) + m 
+unscaled_xx <- c (1, 2, 3, 4)
+m <- mean(x)
+sd <- sd(x)
+scaled_x <- scale (x, center = TRUE, scale = TRUE)
+
+
+unscaled_x <- (scaled_x * sd) + m 
+unscaled_x
+#hist(train_hogares$Ingtotugarr)
 
 # Modelo 1
 model1_ols<- lm(Ingtotugarr ~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
-                edad_jh + menores + Ingtot_jh + max_educ_jh + jh_ocup +
+                edad_jh + menores + max_educ_jh + jh_ocup +
                 num_afsalud + prod_finan_jh, data= train_hogares
                 )
 summary(model1_ols)
 
 # Predicciones de entrenamiento
 # ==============================================================================
-predicciones_train_modelo1_ols <- predict(model1_ols, newdata = train_hogares)
+predicciones_ols <- predict(model1_ols, newdata = train_hogares)
+hist(predicciones_ols)
+
 
 # MSE de entrenamiento
 # ==============================================================================
-training_mse_modelo1_ols <- mean((predicciones_train_modelo1_ols - train_hogares$Ingtotugarr)^2)
-paste("Error (mse) de entrenamiento:", training_mse_modelo1_ols)
+mse_ols <- mean((predicciones_ols - train_hogares$Ingtotugarr)^2)
+paste("Error (mse) de ols:", mse_ols)
+
+##########################################################################################################################################################################
 
 
-####
-#TOCA HACER LAS PREDICCIONES CON TEST
+p_load(faraway)
 
+# Gráficos y tratamiento de datos
+# ==============================================================================
+p_load(tidyverse)
+p_load(skimr)
+p_load(DataExplorer)
+p_load(scales)
+p_load(corrr)
 
-###### -------  Ridge -----------############
+# Modelado
+# ==============================================================================
+p_load(glmnet)
+p_load(pls)
 
 # Matrices de entrenamiento y test
 # ==============================================================================
-x_train <- model.matrix(fat~., data = datos_train)[, -1]
-y_train <- datos_train$fat
+x_train <- model.matrix(Ingtotugarr~Nper+Npersug+P5000+P5010
++viviendapropia+total_female+female_jh+num_ocu+edad_jh+menores
++max_educ_jh+jh_ocup+num_afsalud+prod_finan_jh,data = train_hogares)[, -1]
+y_train <- train_hogares$Ingtotugarr
 
-x_test <- model.matrix(fat~., data = datos_test)[, -1]
-y_test <- datos_test$fat
+#### ---- Ridge -----######
+
+# Evolución del error en función de lambda
+# ==============================================================================
+set.seed(123)
+cv_error_ridge <- cv.glmnet(
+  x      = x_train,
+  y      = y_train,
+  alpha  = 0,
+  nfolds = 10,
+  type.measure = "mse",
+  standardize  = TRUE
+)
+
+cv_error_ridge
+plot(cv_error_ridge)
+
+# Mayor valor de lambda con el que el test-error no se aleja más de 1sd del mínimo.
+paste("Mejor valor de lambda encontrado + 1 desviación estándar:", cv_error_ridge$lambda.1se)
+
+# Mejor modelo lambda óptimo + 1sd
+modelo_ridge <- glmnet(
+  x           = x_train,
+  y           = y_train,
+  alpha       = 0,
+  lambda      = cv_error_ridge$lambda.1se,
+  standardize = TRUE
+)
+
+modelo_ridge
+
+# Coeficientes del modelo
+# ==============================================================================
+df_coeficientes_ridge <- coef(modelo_ridge) %>%
+  as.matrix() %>%
+  as_tibble(rownames = "predictor") %>%
+  rename(coeficiente = s0)
+
+# Predicciones de entrenamiento
+# ==============================================================================
+predicciones_train_ridge <- predict(modelo_ridge, newx = x_train)
+
+# MSE de entrenamiento
+# ==============================================================================
+mse_ridge <- mean((predicciones_train_ridge - y_train)^2)
+paste("Error (mse) de ridge", mse_ridge)
+
+
+#### ---- Lasso -----######
+
+# Creación y entrenamiento del modelo
+# ==============================================================================
+# Para obtener un ajuste con regularización Lasso se indica argumento alpha=1.
+# Si no se especifica valor de lambda, se selecciona un rango automático.
+modelo_lasso <- glmnet(
+  x           = x_train,
+  y           = y_train,
+  alpha       = 1,
+  nlambda     = 100,
+  standardize = TRUE
+)
+
+# Evolución de los coeficientes en función de lambda
+# ==============================================================================
+regularizacion_lasso <- modelo_lasso$beta %>% 
+  as.matrix() %>%
+  t() %>% 
+  as_tibble() %>%
+  mutate(lambda = modelo_lasso$lambda)
+
+regularizacion_lasso <- regularizacion_lasso %>%
+  pivot_longer(
+    cols = !lambda, 
+    names_to = "predictor",
+    values_to = "coeficientes"
+  )
+
+regularizacion_lasso %>%
+  ggplot(aes(x = lambda, y = coeficientes, color = predictor)) +
+  geom_line() +
+  scale_x_log10(
+    breaks = trans_breaks("log10", function(x) 10^x),
+    labels = trans_format("log10", math_format(10^.x))
+  ) +
+  labs(title = "Coeficientes del modelo en función de la regularización") +
+  theme_bw() +
+  theme(legend.position = "none")
+
+# Evolución del error en función de lambda
+# ==============================================================================
+set.seed(123)
+cv_error_lasso <- cv.glmnet(
+  x      = x_train,
+  y      = y_train,
+  alpha  = 1,
+  nfolds = 10,
+  type.measure = "mse",
+  standardize  = TRUE
+)
+
+plot(cv_error_lasso)
+# Mayor valor de lambda con el que el test-error no se aleja más de 1sd del mínimo.
+paste("Mejor valor de lambda encontrado + 1 desviación estándar:", cv_error_lasso$lambda.1se)
+
+# Mejor modelo lambda óptimo + 1sd
+# ==============================================================================
+modelo_lasso <- glmnet(
+  x           = x_train,
+  y           = y_train,
+  alpha       = 1,
+  lambda      = cv_error_lasso$lambda.1se,
+  standardize = TRUE
+)
+
+# Coeficientes del modelo
+# ==============================================================================
+df_coeficientes_lasso <- coef(modelo_lasso) %>%
+  as.matrix() %>%
+  as_tibble(rownames = "predictor") %>%
+  rename(coeficiente = s0)
+
+df_coeficientes_lasso %>%
+  filter(
+    predictor != "(Intercept)",
+    coeficiente != 0
+  ) 
+
+# Predicciones de entrenamiento
+# ==============================================================================
+predicciones_train_lasso <- predict(modelo_lasso, newx = x_train)
+
+# MSE de entrenamiento
+# ==============================================================================
+mse_lasso <- mean((predicciones_train_lasso - y_train)^2)
+print(paste("Error (mse) de lasso", mse_lasso))
+
+
+
+### ----- K-fold Validación cruzada ------#####
+set.seed(123)
+
+model1_kfold <- train(Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+                  edad_jh + menores + max_educ_jh + jh_ocup + num_afsalud + prod_finan_jh, 
+                data = train_hogares, trControl = trainControl(method = "cv", number = 5), 
+                method = "lm")
+
+mse_kfold1<-(model1_kfold$results[,2])^2
+mse_kfold1
+
+### modelo 2 tiene edad al cuadrado
+
+model2_kfold <- train(Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+                        edad_jh + edad_jh2 + menores + max_educ_jh + jh_ocup + num_afsalud + prod_finan_jh, 
+                      data = train_hogares, trControl = trainControl(method = "cv", number = 5), 
+                      method = "lm")
+
+mse_kfold2<-(model2_kfold$results[,2])^2
+mse_kfold2
+
+mse_modelos<-rbind(mse_kfold1,mse_kfold2,mse_lasso, mse_ridge, mse_ols)
+
+#El mejor modelo es lasso dado que es el que tiene menor MSE
+
+# Predicción modelo lasso con base test
+X<-model.matrix(~Nper+Npersug+P5000+P5010
+                +viviendapropia+total_female+female_jh+num_ocu+edad_jh+menores
+                +max_educ_jh+jh_ocup+num_afsalud+prod_finan_jh, test_hogares)
+X<-X[,-1]
+test_hogares$Ingreso_predicho_final<-predict(modelo_lasso,newx = X)
+
+#Prediccion final Modelo Clasificaci?n
+
+summary(test_hogares$Ingreso_predicho_final)
+hist(test_hogares$Ingreso_predicho_final)
+
+##########
+
+
 
 
