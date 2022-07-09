@@ -31,8 +31,8 @@ p_load(skimr, # summary data
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
 #setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
-#setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
-setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
 
 unzip("dataPS2RDS.zip",  list =  T)
 train_hogares<-readRDS("data/train_hogares.Rds")
@@ -162,19 +162,27 @@ DB_2_test<-DB_test %>% group_by(id) %>% summarise(total_female = sum(female_test
                                         num_ocu = sum(ocu),
                                         edad_jh = sum(edad_jh),
                                         menores= sum(menores),
-                                        max_educ_jh= sum( max_educ_jh), 
+                                        max_educ_jh= sum(max_educ_jh), 
                                         jh_ocup= sum(jh_ocup),
                                         num_afsalud = sum(afiliado),
                                         prod_finan_jh=sum(prod_finan_jh)
 ) 
 
-
 test_hogares <-test_hogares %>% left_join(DB_2_test,by="id")
 
 test_hogares$viviendapropia <-as.factor(ifelse (test_hogares$P5090==1 | test_hogares$P5090==2,1,0))
 
+sum(is.na(test_hogares$max_educ_jh))
+
+#Eliminar NA en max_edu_jh
+test_hogares <- test_hogares[!is.na(test_hogares$max_educ_jh),]
+
+#Base Final TEST
+
 ########################################################################################################################################
 ### ----- Escoger variables que nos sirven para hacer el modelo -----####
+
+#Decidimos hacerlo vía dos partes: Caracteristicas del jefe del hogar y caracteristicas propias del hogar 
 
 #Caracteristicas del jefe del hogar (P6050- OpciÃ³n 1 es jefe del hogar - parentesco con jefe del hogar)
 #genero_jef(P6020), ocupado (Oc), educaciÃ³n(P6210, P6210s1),desocupado (Des), 
@@ -276,9 +284,23 @@ box_plot <- box_plot +
   scale_fill_grey() + theme_classic()+
   labs(x= "Pobres", y ="Ingresos Totales Hogar") 
 
+train_hogares$log_ingh <- log(train_hogares$Ingtotugarr+1)
+
+box_plot2 <- ggplot(data=train_hogares , mapping = aes(as.factor(Pobre) , log_ingh)) + 
+  geom_boxplot()
+
+box_plot2 <- box_plot2 +
+  scale_fill_grey() + theme_classic()+
+  labs(x= "Pobres", y =" Logaritmo Ingresos Totales Hogar")
+
+ing_graph <- ggarrange(box_plot, box_plot2) ## Para incluir en el análisis
+
 pobre_bar <- ggplot(data = train_hogares, aes(x = Pobre, fill=Pobre)) +
   geom_bar() +
-  labs (x= "Pobre =1", y = "N?mero de Pobres")
+  labs (subtitle="Base de Entrenamiento",
+        x= "Pobre = 1", y = "Número de Pobres")
+
+total_graphs <- ggarrange(pobre_bar, ing_graph)
 
 
 ############### ------Modelos para pedecir pobreza de los hogares---------############################
@@ -412,6 +434,11 @@ metricas_cm3 <- cm_logit3$byClass
 metricas_cm4 <- cm_logit4$byClass
 metricas_cm5 <- cm_logit5$byClass
 Metricas_modelos <-  rbind(metricas_cm1, metricas_cm2, metricas_cm3, metricas_cm4, metricas_cm5)
+Metricas_modelos <- Metricas_modelos[,-8]
+
+require(xtable)
+
+xtable(Metricas_modelos)
 
 ##ROC curve
 
@@ -471,7 +498,7 @@ require(caret)
 
 train_hogares$Pobre<- factor((train_hogares$Pobre), 
                              levels = c(0, 1), 
-                             labels = c("No", "si"))
+                             labels = c("No", "Si"))
 
 ## DivisiÃ³n del balance de clases para evitar overfitting
 ## Entrenamiento
@@ -632,9 +659,28 @@ with(testResults,table(Pobre,lasso))
 with(testResults,table(Pobre,lasso_roc))
 with(testResults,table(Pobre,lasso_sens))
 
-##### Ahora con base test
+##  Una vez escogemos el modelo, basados en que es preferible identificar en las predicciones la mayor cantidad de Pobres (Sí). 
+##  Procedemos a realizar la predicción final de la variable categórica en la base de Test. 
 
 test_hogares$Pobre_predicho_final<-predict(logit_caret_pob,newdata=test_hogares)
+
+#Prediccion final Modelo Clasificación
+
+summary(test_hogares$Pobre_predicho_final)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 ##############################################################################
 ###############################################################################
@@ -646,6 +692,14 @@ install.packages("corrr")
 library(glmnet)
 library(corrr)
 library(pls)
+
+
+
+
+
+
+
+
 
 ###############################################################################
 ####################### Modelos de regresion lineal ####################################
