@@ -255,6 +255,10 @@ train_hogares <- train_hogares[!is.na(train_hogares$max_educ_jh),]
 ##Creacion de variable Vivienda Propia
 train_hogares$viviendapropia <-as.factor(ifelse (train_hogares$P5090==1 | train_hogares$P5090==2,1,0))
 
+######################################################################################################################
+######################################################################################################################
+######################################################################################################################
+
 #Tabla estad?sticas descriptivas - Variables Num?ricas
 
 library(stargazer)
@@ -664,8 +668,10 @@ test_hogares$Pobre_predicho_final<-predict(logit_caret_pob,newdata=test_hogares)
 
 summary(test_hogares$Pobre_predicho_final)
 
-##############################################################################
-###############################################################################
+
+######################################################################################################################
+######################################################################################################################
+######################################################################################################################
 
 ####----Regression models ---####
 
@@ -680,8 +686,14 @@ library(pls)
 
 ###############################################################################
 ### ----Ingreso de los hogares---- #####
+#x<-Base_var$ingtot
+#lambda<-boxcox(x, objective.name = "Log-Likelihood", optimize = T)$lambda
+#Transformamos la variable
+#Base_var$ingtot_boxcox<-boxcoxTransform(x, lambda)
 
-#hist(train_hogares$Ingtotugarr)
+summary(train_hogares$Ingtotugarr)
+summary(train_hogares)
+hist(train_hogares$Ingtotugarr)
 m <- mean(train_hogares$Ingtotugarr)
 sd <- sd(train_hogares$Ingtotugarr)
 train_hogares$Ingtotugarr_scale <- scale(train_hogares$Ingtotugarr, center = TRUE, scale = TRUE)
@@ -702,7 +714,9 @@ unscaled_x
 #hist(train_hogares$Ingtotugarr)
 
 # Modelo 1
-model1_ols<- lm(Ingtotugarr ~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+train_hogares$log_Ingtotugarr<-log(train_hogares$Ingtotugarr+1)
+
+model1_ols<- lm(Ingtotugarr ~ Dominio + viviendapropia + Nper + total_female + female_jh + num_ocu + 
                 edad_jh + menores + max_educ_jh + jh_ocup +
                 num_afsalud + prod_finan_jh, data= train_hogares
                 )
@@ -711,14 +725,15 @@ summary(model1_ols)
 # Predicciones de entrenamiento
 # ==============================================================================
 predicciones_ols <- predict(model1_ols, newdata = train_hogares)
-hist(predicciones_ols)
+summary(exp(predicciones_ols))
+hist(exp(predicciones_ols))
 
 
-# MSE de entrenamiento
+# MAE de entrenamiento
 # ==============================================================================
-mse_ols <- mean((predicciones_ols - train_hogares$Ingtotugarr)^2)
-paste("Error (mse) de ols:", mse_ols)
-
+mae_ols <- mean(abs((predicciones_ols - train_hogares$Ingtotugarr)))
+paste("Error (mae) de ols:", mae_ols)
+summary(train_hogares$Ingtotugarr)
 ##########################################################################################################################################################################
 
 
@@ -788,7 +803,7 @@ predicciones_train_ridge <- predict(modelo_ridge, newx = x_train)
 
 # MSE de entrenamiento
 # ==============================================================================
-mse_ridge <- mean((predicciones_train_ridge - y_train)^2)
+mse_ridge <- mean(abs(predicciones_train_ridge - y_train))
 paste("Error (mse) de ridge", mse_ridge)
 
 
@@ -877,7 +892,7 @@ predicciones_train_lasso <- predict(modelo_lasso, newx = x_train)
 
 # MSE de entrenamiento
 # ==============================================================================
-mse_lasso <- mean((predicciones_train_lasso - y_train)^2)
+mse_lasso <- mean(abs(predicciones_train_lasso - y_train))
 print(paste("Error (mse) de lasso", mse_lasso))
 
 
