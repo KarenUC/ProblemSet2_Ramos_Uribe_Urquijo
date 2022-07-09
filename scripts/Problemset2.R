@@ -30,9 +30,9 @@ p_load(skimr, # summary data
 
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
-setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
 #setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
-#setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
 
 unzip("dataPS2RDS.zip",  list =  T)
 train_hogares<-readRDS("data/train_hogares.Rds")
@@ -593,6 +593,85 @@ logit_lasso_sens<- train(Pobre ~ factor(viviendapropia) + total_female + factor(
 logit_lasso_sens
 logit_lasso_sens[["bestTune"]]
 
+#Upsampling
+set.seed(123)
+upSampledTrain <- upSample(x = training,
+                           y = training$Pobre,
+                           yname = "Pobre")
+
+dim(training)
+dim(upSampledTrain)
+table(upSampledTrain$Pobre)
+
+set.seed(123)
+logit_lasso_upsample <- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
+                                num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
+                                num_afsalud + prod_finan_jh,
+                              data = upSampledTrain,
+                              method = "glmnet",
+                              trControl = ctrl_pobre,
+                              family = "binomial",
+                              metric = "ROC",
+                              tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
+                              preProcess = c("center", "scale")
+)
+logit_lasso_upsample
+logit_lasso_upsample[["bestTune"]]
+
+
+#Downsampling
+set.seed(1103)
+downSampledTrain <- downSample(x = training,
+                               y = training$Pobre,
+                               yname = "Pobre")
+dim(training)
+dim(downSampledTrain)
+table(downSampledTrain$Pobre)
+
+set.seed(123)
+logit_lasso_downsample <- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
+                                num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
+                                num_afsalud + prod_finan_jh,
+                              data = downSampledTrain,
+                              method = "glmnet",
+                              trControl = ctrl_pobre,
+                              family = "binomial",
+                              metric = "ROC",
+                              tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
+                              preProcess = c("center", "scale")
+)
+logit_lasso_downsample
+logit_lasso_downsample[["bestTune"]]
+
+
+#Smote
+#install.packages("smotefamily")
+#require(smotefamily)
+#predictors<-c("viviendapropia", "total_female", "female_jh", "num_ocu", 
+#              "edad_jh", "menores", "max_educ_jh", "jh_ocup", "num_afsalud", "prod_finan_jh")
+#head( training[predictors])
+
+#smote_output = SMOTE(X = training[predictors],
+#                     target = training$Pobre)
+#oversampled_data = smote_output$data
+#table(training$Pobre)
+#table(oversampled_data$class)
+
+#logit_lasso_smote <- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
+#                                 num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
+#                                 num_afsalud + prod_finan_jh,
+#                               data = oversampled_data,
+#                               method = "glmnet",
+#                               trControl = ctrl_pobre,
+#                               family = "binomial",
+#                               metric = "ROC",
+#                               tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
+#                               preProcess = c("center", "scale")
+#)
+#logit_lasso_smote
+#logit_lasso_smote[["bestTune"]]
+
+
 
 ###Resultados de las métricas 
 result_logitcv <- logit_caret_pob[["results"]]
@@ -600,8 +679,12 @@ colnames(result_logitcv)[1]<-"lambda"
 result_lassoacc <- logit_lasso[["results"]][54,-1]
 result_lassoroc<- logit_lasso_ROC[["results"]][54,-1]
 result_lassosens<- logit_lasso_sens[["results"]][100,-1]
-results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens)
+result_lassoupsample <- logit_lasso_upsample[["results"]][57,-1]
+result_lassodownsample <- logit_lasso_downsample[["results"]][57,-1]
+
+results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens, result_lassoupsample,result_lassodownsample  )
 ###El mejor modelo es el Modelo logit de acuerdo con el ROC
+
 
 ###Determinar el Cutoff
 evaluation
@@ -622,6 +705,8 @@ with(evalResults,table(Pobre,hat_pobre_05))
 with(evalResults,table(Pobre,hat_pobre_rfThresh))
 
 #se prefiere hat_pobre_05 porque le atina a más pobres
+
+
 
 ############## ----- Evaluación en la muestra de prueba ------ #####################
 
