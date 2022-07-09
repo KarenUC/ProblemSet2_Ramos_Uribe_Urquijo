@@ -269,11 +269,7 @@ stargazer(train_hogares[c("menores", "Ingtot_jh", "max_educ_jh", "num_afsalud")]
 install.packages("gtsummary")
 library(gtsummary)
 library(tidyverse)
-train_hogares %>%
-  select(female_jh, jh_ocup, viviendapropia) %>%
-  tbl_summary() %>%
-  as_gt() %>%
-  gt::as_latex()
+
 
 ### Gr?ficas estadisticas descriptivas ###
 
