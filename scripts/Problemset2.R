@@ -1024,7 +1024,7 @@ test_hogares$Ingreso_predicho_final<-predict(modelo_lasso,newx = X)
 summary(test_hogares$Ingreso_predicho_final)
 hist(test_hogares$Ingreso_predicho_final)
 
-test_hogares$Ing_Pred_test_hogares<-ifelse(test_hogares$Ingreso_predicho_final<=test_hogares$Lp,1,0)
+test_hogares$Ing_Pred_test_hogares<-ifelse(test_hogares$Ingreso_predicho_final<=test_hogares$Lp,"Si","No")
 
 # ########## Box cox para Linea de pobreza
 # z<-as.numeric(train_hogares$Lp)
@@ -1039,7 +1039,7 @@ test_hogares$Ing_Pred_test_hogares<-ifelse(test_hogares$Ingreso_predicho_final<=
 ##########Archivo de predicciones
 id_test_hogares<-test_hogares$id
 Pobre_Pred_test_hogares<-test_hogares$Pobre_predicho_final
-Ing_Pred_test_hogares<-test_hogares$Ingreso_predicho_final
+Ing_Pred_test_hogares<-test_hogares$Ing_Pred_test_hogares
 DB_test_hog<-data_frame(id_test_hogares,Pobre_Pred_test_hogares,Ing_Pred_test_hogares)
 write.csv(DB_test_hog, file = "predictions.csv")
 
