@@ -685,7 +685,7 @@ logit_lasso_downsample[["bestTune"]]
 ###Resultados de las métricas 
 result_logitcv <- logit_caret_pob[["results"]]
 colnames(result_logitcv)[1]<-"lambda"
-result_lassoacc <- logit_lasso[["results"]][54,-1]
+result_lassoacc <- logit_lasso[["results"]][55,-1]
 result_lassoroc<- logit_lasso_ROC[["results"]][54,-1]
 result_lassosens<- logit_lasso_sens[["results"]][100,-1]
 result_lassoupsample <- logit_lasso_upsample[["results"]][57,-1]
@@ -693,7 +693,7 @@ result_lassodownsample <- logit_lasso_downsample[["results"]][57,-1]
 
 results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens, result_lassoupsample,result_lassodownsample  )
 ###El mejor modelo es el Modelo lasso downsample de acuerdo con el ROC
-
+xtable(results)
 
 ###Determinar el Cutoff
 evaluation
