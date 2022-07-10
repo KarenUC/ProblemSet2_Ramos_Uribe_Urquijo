@@ -791,47 +791,34 @@ p_load(EnvStats)
 ###############################################################################
 ### ----Ingreso de los hogares---- #####
 
-#Transformación Box Cox Ingreso de los hogares
-sum(is.na(train_hogares$Ingtotugarr))
-x<-as.numeric(train_hogares$Ingtotugarr)
-lambda<-boxcox(x+1, objective.name = "Log-Likelihood", optimize = T)$lambda
-#Transformamos la variable
-train_hogares$Ingtotugarr_boxcox<-boxcoxTransform(x+1, lambda)
+# #Transformación Box Cox Ingreso de los hogares
+# sum(is.na(train_hogares$Ingtotugarr))
+# x<-as.numeric(train_hogares$Ingtotugarr)
+# lambda<-boxcox(x+1, objective.name = "Log-Likelihood", optimize = T)$lambda
+# #Transformamos la variable
+# train_hogares$Ingtotugarr_boxcox<-boxcoxTransform(x+1, lambda)
 #Transformación con log
-train_hogares$log_Ingtotugarr<-log(train_hogares$Ingtotugarr+1)
-
-summary(train_hogares$Ingtotugarr)
-summary(train_hogares$Ingtotugarr_boxcox)
-hist(train_hogares$Ingtotugarr)
-hist(train_hogares$Ingtotugarr_boxcox)
-hist(train_hogares$log_Ingtotugarr)
-
-#Escalar variables X
-train_hogares$Nper_sc<-scale(train_hogares$Nper, center = TRUE, scale = TRUE) 
-train_hogares$total_female_sc<-scale(train_hogares$total_female, center = TRUE, scale = TRUE) 
-train_hogares$num_ocu_sc<-scale(train_hogares$num_ocu, center = TRUE, scale = TRUE) 
-train_hogares$edad_jh_sc<-scale(train_hogares$edad_jh, center = TRUE, scale = TRUE) 
-train_hogares$menores_sc<-scale(train_hogares$menores, center = TRUE, scale = TRUE) 
-train_hogares$max_educ_jh_sc<-scale(train_hogares$max_educ_jh, center = TRUE, scale = TRUE) 
-train_hogares$num_afsalud_sc<-scale(train_hogares$num_afsalud, center = TRUE, scale = TRUE) 
-
-class(train_hogares$prod_finan_jh)
-summary(train_hogares$prod_finan_jh)
+#train_hogares$log_Ingtotugarr<-log(train_hogares$Ingtotugarr+1)
+# 
+# summary(train_hogares$Ingtotugarr)
+# summary(train_hogares$Ingtotugarr_boxcox)
+#hist(train_hogares$Ingtotugarr)
+# hist(train_hogares$Ingtotugarr_boxcox)
+#hist(train_hogares$log_Ingtotugarr)
+# summary(train_hogares)
 
 # Modelo 1
-model1_ols<- lm(Ingtotugarr_boxcox ~ Dominio + viviendapropia + Nper + total_female + female_jh + num_ocu + 
-                edad_jh+ edad_jh2 + menores + max_educ_jh + jh_ocup +
-                num_afsalud, data= train_hogares
+model1_ols<- lm(Ingtotugarr ~ Dominio + viviendapropia
+                + Nper + total_female + female_jh + num_ocu + 
+                  edad_jh+ edad_jh2 + menores + max_educ_jh 
+                + jh_ocup + prod_finan_jh+num_afsalud, data= train_hogares
                 )
 summary(model1_ols)
-
 
 # Predicciones de entrenamiento
 # ==============================================================================
 predicciones_ols <- predict(model1_ols, newdata = train_hogares)
 summary(predicciones_ols)
-hist(predicciones_ols)
-
 
 # MAE de entrenamiento
 # ==============================================================================
@@ -904,10 +891,10 @@ df_coeficientes_ridge <- coef(modelo_ridge) %>%
 # ==============================================================================
 predicciones_train_ridge <- predict(modelo_ridge, newx = x_train)
 
-# MSE de entrenamiento
+# MAE de entrenamiento
 # ==============================================================================
-mse_ridge <- mean(abs(predicciones_train_ridge - y_train))
-paste("Error (mse) de ridge", mse_ridge)
+mae_ridge <- mean(abs(predicciones_train_ridge - y_train))
+paste("Error (mae) de ridge", mae_ridge)
 
 
 #### ---- Lasso -----######
@@ -993,35 +980,35 @@ df_coeficientes_lasso %>%
 # ==============================================================================
 predicciones_train_lasso <- predict(modelo_lasso, newx = x_train)
 
-# MSE de entrenamiento
+# MAE de entrenamiento
 # ==============================================================================
-mse_lasso <- mean(abs(predicciones_train_lasso - y_train))
-print(paste("Error (mse) de lasso", mse_lasso))
+mae_lasso <- mean(abs(predicciones_train_lasso - y_train))
+print(paste("Error (mae) de lasso", mae_lasso))
 
 
 
 ### ----- K-fold Validación cruzada ------#####
 set.seed(123)
 
-model1_kfold <- train(Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+model1_kfold <- train(log_Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
                   edad_jh + menores + max_educ_jh + jh_ocup + num_afsalud + prod_finan_jh, 
                 data = train_hogares, trControl = trainControl(method = "cv", number = 5), 
                 method = "lm")
 
-mse_kfold1<-(model1_kfold$results[,2])^2
-mse_kfold1
+mae_kfold1<-model1_kfold$results[,4]
+mae_kfold1
 
 ### modelo 2 tiene edad al cuadrado
 
-model2_kfold <- train(Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+model2_kfold <- train(log_Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
                         edad_jh + edad_jh2 + menores + max_educ_jh + jh_ocup + num_afsalud + prod_finan_jh, 
                       data = train_hogares, trControl = trainControl(method = "cv", number = 5), 
                       method = "lm")
 
-mse_kfold2<-(model2_kfold$results[,2])^2
-mse_kfold2
+mae_kfold2<-model2_kfold$results[,4]
+mae_kfold2
 
-mse_modelos<-rbind(mse_kfold1,mse_kfold2,mse_lasso, mse_ridge, mse_ols)
+mae_modelos<-rbind(mae_kfold1,mae_kfold2,mae_lasso, mae_ridge, mae_ols)
 
 #El mejor modelo es lasso dado que es el que tiene menor MSE
 
@@ -1037,13 +1024,17 @@ test_hogares$Ingreso_predicho_final<-predict(modelo_lasso,newx = X)
 summary(test_hogares$Ingreso_predicho_final)
 hist(test_hogares$Ingreso_predicho_final)
 
-########## Box cox para Linea de pobreza
-z<-train_hogares$Lp
-lambda<-boxcox(z, objective.name = "Log-Likelihood", optimize = T)$lambda
-#Transformamos la variable
-train_hogares$Ingtotugarr_boxcox<-boxcoxTransform(x+1, lambda)
+test_hogares$Ing_Pred_test_hogares<-ifelse(test_hogares$Ingreso_predicho_final<=test_hogares$Lp,1,0)
 
-
+# ########## Box cox para Linea de pobreza
+# z<-as.numeric(train_hogares$Lp)
+# lambda_lp<-boxcox(z, objective.name = "Log-Likelihood", optimize = T)$lambda
+# #Transformamos la variable
+# train_hogares$lp_boxcox<-boxcoxTransform(z, lambda_lp)
+# 
+# summary(train_hogares$Lp)
+# summary(train_hogares$lp_boxcox)
+# a<-cbind(train_hogares$Lp,train_hogares$lp_boxcox)
 
 ##########Archivo de predicciones
 id_test_hogares<-test_hogares$id
