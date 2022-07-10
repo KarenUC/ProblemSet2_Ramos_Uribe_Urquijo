@@ -472,9 +472,9 @@ auc5 <- round(auc(train_hogares$Pobre, train_hogares$y_hat_5),4)
 model5 <- paste('Model 5 (AUC=',toString(round(auc5,2)),')',sep = '')
 
 # Create an empty figure, and iteratively add a line for each class
-install.packages("plotly")
-install.packages("tidymodels")
-install.packages("fastDummies")
+#install.packages("plotly")
+#install.packages("tidymodels")
+#install.packages("fastDummies")
 
 library(plotly)
 library(tidymodels)
@@ -645,29 +645,35 @@ logit_lasso_downsample[["bestTune"]]
 
 
 #Smote
-#install.packages("smotefamily")
-#require(smotefamily)
-#predictors<-c("viviendapropia", "total_female", "female_jh", "num_ocu", 
-#              "edad_jh", "menores", "max_educ_jh", "jh_ocup", "num_afsalud", "prod_finan_jh")
-#head( training[predictors])
-
-#smote_output = SMOTE(X = training[predictors],
+# training<-training %>% mutate(viviendapropia=ifelse(viviendapropia=="1",1,0))
+# training<-training %>% mutate(female_jh=ifelse(female_jh=="1",1,0))
+# training<-training %>% mutate(jh_ocup=ifelse(jh_ocup=="1",1,0))
+# training<-training %>% mutate(prod_finan_jh=ifelse(prod_finan_jh=="1",1,0))
+# 
+# #install.packages("smotefamily")
+# require(smotefamily)
+# 
+# predictors<-c("viviendapropia", "total_female", "female_jh", "num_ocu", 
+#               "edad_jh", "menores", "max_educ_jh", "jh_ocup", "num_afsalud", "prod_finan_jh")
+# head( training[predictors])
+# 
+# smote_output = SMOTE(X = training[predictors],
 #                     target = training$Pobre)
-#oversampled_data = smote_output$data
-#table(training$Pobre)
-#table(oversampled_data$class)
-
-#logit_lasso_smote <- train(Pobre ~ factor(viviendapropia) + total_female + factor(female_jh) +
-#                                 num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
-#                                 num_afsalud + prod_finan_jh,
-#                               data = oversampled_data,
-#                               method = "glmnet",
-#                               trControl = ctrl_pobre,
-#                               family = "binomial",
-#                               metric = "ROC",
-#                               tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
-#                               preProcess = c("center", "scale")
-#)
+# oversampled_data = smote_output$data
+# table(training$Pobre)
+# table(oversampled_data$class)
+# 
+# logit_lasso_smote <- train(class ~ factor(viviendapropia) + total_female + factor(female_jh) +
+#                              num_ocu + edad_jh + menores + max_educ_jh + factor(jh_ocup) +
+#                              num_afsalud + prod_finan_jh,
+#                                data = oversampled_data,
+#                                method = "glmnet",
+#                                trControl = ctrl_pobre,
+#                                family = "binomial",
+#                                metric = "ROC",
+#                                tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
+#                                preProcess = c("center", "scale")
+# )
 #logit_lasso_smote
 #logit_lasso_smote[["bestTune"]]
 
@@ -683,13 +689,13 @@ result_lassoupsample <- logit_lasso_upsample[["results"]][57,-1]
 result_lassodownsample <- logit_lasso_downsample[["results"]][57,-1]
 
 results<-rbind(result_logitcv,result_lassoacc,result_lassoroc, result_lassosens, result_lassoupsample,result_lassodownsample  )
-###El mejor modelo es el Modelo logit de acuerdo con el ROC
+###El mejor modelo es el Modelo lasso downsample de acuerdo con el ROC
 
 
 ###Determinar el Cutoff
 evaluation
 evalResults <- data.frame(Pobre = evaluation$Pobre)
-evalResults$Roc <- predict(logit_caret_pob,
+evalResults$Roc <- predict(logit_lasso_downsample,
                            newdata = evaluation,
                            type = "prob")[,1]
 library(pROC)
@@ -704,7 +710,7 @@ evalResults <- evalResults %>% mutate(hat_pobre_05=ifelse(evalResults$Roc>0.5,"S
 with(evalResults,table(Pobre,hat_pobre_05))
 with(evalResults,table(Pobre,hat_pobre_rfThresh))
 
-#se prefiere hat_pobre_05 porque le atina a más pobres
+#El threshold es de 0.53. Sin embargo, se prefiere hat_pobre_05 porque le atina a más hogares que son verdaderamente pobres
 
 
 
@@ -732,22 +738,34 @@ testResults$lasso_sens<- predict(logit_lasso_sens,
                                      newdata = testing,
                                      type = "prob")[,1]
 
+testResults$lasso_upsample<- predict(logit_lasso_upsample,
+                                 newdata = testing,
+                                 type = "prob")[,1]
+
+testResults$lasso_downsample<- predict(logit_lasso_downsample,
+                                 newdata = testing,
+                                 type = "prob")[,1]
+
 testResults<-testResults %>%
   mutate(logit=ifelse(logit>rfThresh$threshold,"Si","No"),
          lasso=ifelse(lasso>rfThresh$threshold,"Si","No"),
          lasso_roc =ifelse(lasso_roc>rfThresh$threshold,"Si","No"),
          lasso_sens=ifelse(lasso_sens>rfThresh$threshold,"Si","No"),
+         lasso_upsample=ifelse(lasso_upsample>rfThresh$threshold,"Si","No"),
+         lasso_downsample=ifelse(lasso_downsample>rfThresh$threshold,"Si","No")
           )
 
 with(testResults,table(Pobre,logit))
 with(testResults,table(Pobre,lasso))
 with(testResults,table(Pobre,lasso_roc))
 with(testResults,table(Pobre,lasso_sens))
+with(testResults,table(Pobre,lasso_upsample))
+with(testResults,table(Pobre,lasso_downsample))
 
 ##  Una vez escogemos el modelo, basados en que es preferible identificar en las predicciones la mayor cantidad de Pobres (S?). 
 ##  Procedemos a realizar la predicci?n final de la variable categ?rica en la base de Test. 
 
-test_hogares$Pobre_predicho_final<-predict(logit_caret_pob,newdata=test_hogares)
+test_hogares$Pobre_predicho_final<-predict(logit_lasso_downsample,newdata=test_hogares)
 
 #Prediccion final Modelo Clasificaci?n
 
@@ -1019,8 +1037,12 @@ test_hogares$Ingreso_predicho_final<-predict(modelo_lasso,newx = X)
 summary(test_hogares$Ingreso_predicho_final)
 hist(test_hogares$Ingreso_predicho_final)
 
-##########
-
+##########Archivo de predicciones
+id_test_hogares<-test_hogares$id
+Pobre_Pred_test_hogares<-test_hogares$Pobre_predicho_final
+Ing_Pred_test_hogares<-test_hogares$Ingreso_predicho_final
+DB_test_hog<-data_frame(id_test_hogares,Pobre_Pred_test_hogares,Ing_Pred_test_hogares)
+write.csv(DB_test_hog, file = "predictions.csv")
 
 
 
