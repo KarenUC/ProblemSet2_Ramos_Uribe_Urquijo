@@ -30,9 +30,9 @@ p_load(skimr, # summary data
 
 #test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
-#setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
+setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
 #setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
-setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
+#setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
 
 unzip("dataPS2RDS.zip",  list =  T)
 train_hogares<-readRDS("data/train_hogares.Rds")
@@ -156,6 +156,8 @@ DB_test$max_educ_jh <-ifelse(DB_test$jh_test==1,test$P6210s1,0)
 DB_test$jh_ocup <-ifelse(DB_test$jh_test==1,DB_test$ocu,0)
 DB_test$afiliado<-ifelse(test$P6090!=1 | is.na(test$P6090),0,1)
 DB_test$prod_finan_jh<-(ifelse(test$P7510s5!=1 | is.na(test$P7510s5),0,1))
+DB_test$prod_finan_jh<-(ifelse(DB_test$jh_test==1 & DB_test$prod_finan_jh==1,1,0))
+
 
 DB_2_test<-DB_test %>% group_by(id) %>% summarise(total_female = sum(female_test),
                                         female_jh = sum(female_jh),
@@ -210,6 +212,7 @@ DB$max_educ_jh <-ifelse(DB$jh==1,train$P6210s1,0)
 DB$jh_ocup <-ifelse(DB$jh==1,DB$ocu,0)
 DB$afiliado<-ifelse(train$P6090!=1 | is.na(train$P6090),0,1)
 DB$prod_finan_jh<-(ifelse(train$P7510s5!=1 | is.na(train$P7510s5),0,1))
+DB$prod_finan_jh<-(ifelse(DB$jh==1 & DB$prod_finan_jh==1,1,0))
 DB$Estrato<-ifelse(DB$jh==1,train$Estrato1,0)
 DB$Ingtot<- train$Ingtot
 DB$Ingtot_jh<-ifelse(DB$jh==1,DB$Ingtot, 0)
@@ -650,10 +653,10 @@ logit_lasso_downsample[["bestTune"]]
 # training<-training %>% mutate(jh_ocup=ifelse(jh_ocup=="1",1,0))
 # training<-training %>% mutate(prod_finan_jh=ifelse(prod_finan_jh=="1",1,0))
 # 
-# #install.packages("smotefamily")
+# p_load(smotefamily)
 # require(smotefamily)
 # 
-# predictors<-c("viviendapropia", "total_female", "female_jh", "num_ocu", 
+# predictors<-c("viviendapropia", "total_female", "female_jh", "num_ocu",
 #               "edad_jh", "menores", "max_educ_jh", "jh_ocup", "num_afsalud", "prod_finan_jh")
 # head( training[predictors])
 # 
@@ -674,9 +677,9 @@ logit_lasso_downsample[["bestTune"]]
 #                                tuneGrid = expand.grid(alpha = 0,lambda=lambda_grid),
 #                                preProcess = c("center", "scale")
 # )
-#logit_lasso_smote
-#logit_lasso_smote[["bestTune"]]
-
+# logit_lasso_smote
+# logit_lasso_smote[["bestTune"]]
+# 
 
 
 ###Resultados de las métricas 
@@ -778,65 +781,62 @@ summary(test_hogares$Pobre_predicho_final)
 
 ####----Regression models ---####
 
-install.packages("glmnet")
-install.packages("corrr")
-library(glmnet)
-library(corrr)
-library(pls)
-
+p_load(glmnet)
+p_load(corrr)
+p_load(pls)
+p_load(EnvStats)
 ###############################################################################
 ####################### Modelos de regresion lineal ####################################
 
 ###############################################################################
 ### ----Ingreso de los hogares---- #####
-#x<-Base_var$ingtot
-#lambda<-boxcox(x, objective.name = "Log-Likelihood", optimize = T)$lambda
+
+#Transformación Box Cox Ingreso de los hogares
+sum(is.na(train_hogares$Ingtotugarr))
+x<-as.numeric(train_hogares$Ingtotugarr)
+lambda<-boxcox(x+1, objective.name = "Log-Likelihood", optimize = T)$lambda
 #Transformamos la variable
-#Base_var$ingtot_boxcox<-boxcoxTransform(x, lambda)
-
-summary(train_hogares$Ingtotugarr)
-summary(train_hogares)
-hist(train_hogares$Ingtotugarr)
-m <- mean(train_hogares$Ingtotugarr)
-sd <- sd(train_hogares$Ingtotugarr)
-train_hogares$Ingtotugarr_scale <- scale(train_hogares$Ingtotugarr, center = TRUE, scale = TRUE)
- 
-train_hogares$Ingtotugarr_unscale <- (train_hogares$Ingtotugarr_scale * sd) + m 
-
-train_hogares$Ingtotugarr_unscale == train_hogares$Ingtotugarr
-
-unscaled_x <- (scaled_x * sd) + m 
-unscaled_xx <- c (1, 2, 3, 4)
-m <- mean(x)
-sd <- sd(x)
-scaled_x <- scale (x, center = TRUE, scale = TRUE)
-
-
-unscaled_x <- (scaled_x * sd) + m 
-unscaled_x
-#hist(train_hogares$Ingtotugarr)
-
-# Modelo 1
+train_hogares$Ingtotugarr_boxcox<-boxcoxTransform(x+1, lambda)
+#Transformación con log
 train_hogares$log_Ingtotugarr<-log(train_hogares$Ingtotugarr+1)
 
-model1_ols<- lm(Ingtotugarr ~ Dominio + viviendapropia + Nper + total_female + female_jh + num_ocu + 
-                edad_jh + menores + max_educ_jh + jh_ocup +
-                num_afsalud + prod_finan_jh, data= train_hogares
+summary(train_hogares$Ingtotugarr)
+summary(train_hogares$Ingtotugarr_boxcox)
+hist(train_hogares$Ingtotugarr)
+hist(train_hogares$Ingtotugarr_boxcox)
+hist(train_hogares$log_Ingtotugarr)
+
+#Escalar variables X
+train_hogares$Nper_sc<-scale(train_hogares$Nper, center = TRUE, scale = TRUE) 
+train_hogares$total_female_sc<-scale(train_hogares$total_female, center = TRUE, scale = TRUE) 
+train_hogares$num_ocu_sc<-scale(train_hogares$num_ocu, center = TRUE, scale = TRUE) 
+train_hogares$edad_jh_sc<-scale(train_hogares$edad_jh, center = TRUE, scale = TRUE) 
+train_hogares$menores_sc<-scale(train_hogares$menores, center = TRUE, scale = TRUE) 
+train_hogares$max_educ_jh_sc<-scale(train_hogares$max_educ_jh, center = TRUE, scale = TRUE) 
+train_hogares$num_afsalud_sc<-scale(train_hogares$num_afsalud, center = TRUE, scale = TRUE) 
+
+class(train_hogares$prod_finan_jh)
+summary(train_hogares$prod_finan_jh)
+
+# Modelo 1
+model1_ols<- lm(Ingtotugarr_boxcox ~ Dominio + viviendapropia + Nper + total_female + female_jh + num_ocu + 
+                edad_jh+ edad_jh2 + menores + max_educ_jh + jh_ocup +
+                num_afsalud, data= train_hogares
                 )
 summary(model1_ols)
+
 
 # Predicciones de entrenamiento
 # ==============================================================================
 predicciones_ols <- predict(model1_ols, newdata = train_hogares)
-summary(exp(predicciones_ols))
-hist(exp(predicciones_ols))
+summary(predicciones_ols)
+hist(predicciones_ols)
 
 
 # MAE de entrenamiento
 # ==============================================================================
 mae_ols <- mean(abs((predicciones_ols - train_hogares$Ingtotugarr)))
 paste("Error (mae) de ols:", mae_ols)
-summary(train_hogares$Ingtotugarr)
 ##########################################################################################################################################################################
 
 
@@ -1037,6 +1037,14 @@ test_hogares$Ingreso_predicho_final<-predict(modelo_lasso,newx = X)
 summary(test_hogares$Ingreso_predicho_final)
 hist(test_hogares$Ingreso_predicho_final)
 
+########## Box cox para Linea de pobreza
+z<-train_hogares$Lp
+lambda<-boxcox(z, objective.name = "Log-Likelihood", optimize = T)$lambda
+#Transformamos la variable
+train_hogares$Ingtotugarr_boxcox<-boxcoxTransform(x+1, lambda)
+
+
+
 ##########Archivo de predicciones
 id_test_hogares<-test_hogares$id
 Pobre_Pred_test_hogares<-test_hogares$Pobre_predicho_final
@@ -1044,5 +1052,5 @@ Ing_Pred_test_hogares<-test_hogares$Ingreso_predicho_final
 DB_test_hog<-data_frame(id_test_hogares,Pobre_Pred_test_hogares,Ing_Pred_test_hogares)
 write.csv(DB_test_hog, file = "predictions.csv")
 
-
+########
 
