@@ -990,7 +990,7 @@ print(paste("Error (mae) de lasso", mae_lasso))
 ### ----- K-fold Validación cruzada ------#####
 set.seed(123)
 
-model1_kfold <- train(log_Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+model1_kfold <- train(Ingtotugarr~ Dominio+viviendapropia + Nper + total_female + female_jh + num_ocu + 
                   edad_jh + menores + max_educ_jh + jh_ocup + num_afsalud + prod_finan_jh, 
                 data = train_hogares, trControl = trainControl(method = "cv", number = 5), 
                 method = "lm")
@@ -1000,7 +1000,7 @@ mae_kfold1
 
 ### modelo 2 tiene edad al cuadrado
 
-model2_kfold <- train(log_Ingtotugarr~ viviendapropia + Nper + total_female + female_jh + num_ocu + 
+model2_kfold <- train(Ingtotugarr~ Dominio+viviendapropia + Nper + total_female + female_jh + num_ocu + 
                         edad_jh + edad_jh2 + menores + max_educ_jh + jh_ocup + num_afsalud + prod_finan_jh, 
                       data = train_hogares, trControl = trainControl(method = "cv", number = 5), 
                       method = "lm")
@@ -1024,8 +1024,10 @@ test_hogares$Ingreso_predicho_final<-predict(modelo_lasso,newx = X)
 summary(test_hogares$Ingreso_predicho_final)
 hist(test_hogares$Ingreso_predicho_final)
 
-test_hogares$Ing_Pred_test_hogares<-ifelse(test_hogares$Ingreso_predicho_final<=test_hogares$Lp,"Si","No")
-
+test_hogares$Ing_Pred_test_hogares<-factor(ifelse(test_hogares$Ingreso_predicho_final<=test_hogares$Lp,1,0))
+test_hogares$Ing_Pred_test_hogares<- factor((test_hogares$Ing_Pred_test_hogares), 
+                             levels = c(0, 1), 
+                             labels = c("No", "Si"))
 # ########## Box cox para Linea de pobreza
 # z<-as.numeric(train_hogares$Lp)
 # lambda_lp<-boxcox(z, objective.name = "Log-Likelihood", optimize = T)$lambda
@@ -1041,7 +1043,10 @@ id_test_hogares<-test_hogares$id
 Pobre_Pred_test_hogares<-test_hogares$Pobre_predicho_final
 Ing_Pred_test_hogares<-test_hogares$Ing_Pred_test_hogares
 DB_test_hog<-data_frame(id_test_hogares,Pobre_Pred_test_hogares,Ing_Pred_test_hogares)
+summary(DB_test_hog)
 write.csv(DB_test_hog, file = "predictions.csv")
 
 ########
+
+
 
