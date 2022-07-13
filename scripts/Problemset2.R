@@ -1046,7 +1046,9 @@ Pobre_Pred_test_hogares<-test_hogares$Pobre_predicho_final
 Ing_Pred_test_hogares<-test_hogares$Ing_Pred_test_hogares
 DB_test_hog<-data_frame(id_test_hogares,Pobre_Pred_test_hogares,Ing_Pred_test_hogares)
 summary(DB_test_hog)
-write.csv(DB_test_hog, file = "predictions.csv")
+
+setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/document")
+write.csv(DB_test_hog, file = "predictions_ramos_uribe_urquijo_c10_r7.csv")
 
 ########
 
