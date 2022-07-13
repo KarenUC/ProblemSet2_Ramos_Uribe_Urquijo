@@ -28,13 +28,15 @@ p_load(skimr, # summary data
 #########################################################################################
 #Cargar los datos
 
-#test_hogares<-import("https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo/tree/main/data/test_hogares.Rds")
 
-setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/")
-#setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/")
-#setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/")
+#### CAMBIAR PATH SEGÚN RUTA PC AL REPOSITORIO ###
 
-unzip("dataPS2RDS.zip",  list =  T)
+
+#setwd("/Users/jdaviduu96/Documents/MECA 2022/Big Data y Machine Learning 2022-13/Problem set 2/ProblemSet2_Ramos_Uribe_Urquijo/stores")
+setwd("C:/Users/kurib/OneDrive - Universidad de los Andes/Documentos/MECA/Github/ProblemSet2_Ramos_Uribe_Urquijo/stores")
+#setwd("C:/Users/pau_9/Documents/GitHub/ProblemSet2_Ramos_Uribe_Urquijo/stores")
+
+
 train_hogares<-readRDS("data/train_hogares.Rds")
 train_personas<-readRDS("data/train_personas.Rds")
 test_hogares<-readRDS("data/test_hogares.Rds")
