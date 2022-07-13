@@ -6,7 +6,7 @@ En este repositorio se encuentra el desarrollo del segundo problem set de la asi
 
 Este trabajo contiene:
 
-- `document`: Documento final PDF, desarrollo PS2.
+- `document`: Documento final PDF, desarrollo PS2 y predicciones para cada modelo.
 - `scripts`: Scripts de R
 - `stores`: Bases utilizadas (GEIH)
 - `views`: Imágenes y Tablas
