@@ -88,7 +88,7 @@
 		{
 			\title{\bf \emph{Problem Set 2: Predicting Poverty}}
 \author{Paula Ramos, Karen Uribe-Chaves y Juan D. Urquijo} 
-\date{\today \\ Repository Link:\href{https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo} {\color{blue}{\it Github}}}
+\date{July 12, 2022 \\ Repository Link:\href{https://github.com/KarenUC/ProblemSet2_Ramos_Uribe_Urquijo} {\color{blue}{\it Github}}}
 			}
 
    		\maketitle
@@ -245,12 +245,15 @@ Pobres Lasso: test & $66,082$ & $85$ \\
 \end{table}
 
 \justify
-En conclusión, los modelos lineales estudiados no son una buena alternativa a la hora de predecir variables categóricas (Pobre o No Pobre) que dependen de la correcta predicción del ingreso del hogar. Esto se puede deber a los valores atípicos observados en la distribución del ingreso y al desbalance que existe entre las clases de la variable que se quiere predecir. Al predecir el ingreso de los hogares para luego compararlo con la linea de pobreza utilizando el modelo con menor MAE se obtiene que solo el 0.13\% de los hogares son pobres. Esto podría sugerir que el modelo está sobrestimando el ingreso de los hogares en la base de testing.
+En conclusión, los modelos lineales estudiados no son una buena alternativa a la hora de predecir variables categóricas (Pobre o No Pobre) que dependen de la correcta predicción del ingreso del hogar. Esto se puede deber a los valores atípicos observados en la distribución del ingreso y al desbalance que existe entre las clases de la variable que se quiere predecir. Al predecir el ingreso de los hogares para luego compararlo con la linea de pobreza utilizando el modelo con menor MAE en la base de testing, se obtiene que solo el 0.13\% de los hogares son pobres; esto podría sugerir que el modelo está sobrestimando el ingreso de los hogares.
 
 \section{\bf\emph {Conclusions and recommendations}}
 \subsection{Conclusiones}
   \justify
-Las predicciones de pobreza encontradas dan cuenta de la dificultad de medir y predecir los índices de pobreza a nivel mundial. La heterogeneidad de los resultados encontrados, brinda evidencia frente a la cual la inclusión o exclusión de variables, afectan las métricas de manera relevante; y la definición de la forma funcional respecto a los determinantes de la pobreza aún tiene espacio para su estudio. En particular, se encontró que con los modelos de clasificación es posible identificar más hogares pobres dentro y fuera de muestra, comparados con los modelos de regresión lineal. Para el modelo de \emph {Logit Down-Sampling} las predicciones finales arrojaron un 35\% de hogares pobres; por lo cual son preferibles respecto al objetivo de reducir el error tipo 2 (falsos negativos) o, en otras palabras, encontrar la mayor cantidad pobres. En contraste, el modelo de regresión lineal planteado no tuvo un porcentaje de predicción adecuado, clasificando como pobres únicamente al 0.13\% de los hogares de la muestra de prueba. 
+Las predicciones de pobreza encontradas dan cuenta de la dificultad de medir y predecir los índices de pobreza a nivel mundial. La heterogeneidad de los resultados encontrados, brinda evidencia frente a la cual la inclusión o exclusión de variables, afectan las métricas de manera relevante; y la definición de la forma funcional respecto a los determinantes de la pobreza aún tiene espacio para su estudio. 
+\justify
+En particular, se encontró que con los modelos de clasificación es posible identificar más hogares pobres dentro y fuera de muestra, comparados con los modelos de regresión lineal. Para el modelo de \emph {Logit Down-Sampling} las predicciones finales arrojaron un 35\% de hogares pobres; por lo cual son preferibles respecto al objetivo de reducir el error tipo 2 (falsos negativos) o, en otras palabras, encontrar la mayor cantidad pobres. En contraste, cabe resaltar que a través de la clasificación de los hogares pobres a través del ingreso por debajo de la línea de pobreza, se identifica que el 3,25\% son hogares pobres(5,367). Por esta razón, el modelo de regresión lineal planteado no tuvo un porcentaje de predicción adecuado,
+clasificando como pobres únicamente al 0.13\% de los hogares de la muestra de prueba. 
 
 
 \subsection{Recomendaciones}
@@ -431,5 +434,19 @@ Logit-Downsampling &  57 & 0.01855 & 0.79 & 0.74 & 0.69 & 0.72 & 0.43 \\
 \includegraphics[width=120mm, scale=0.3]{Lasso.png}
 
 \end{figure}
+
+\begin{table}[!htbp] \centering 
+  \caption{Matriz confusión mejor Modelo de Regresión} 
+  \label{} 
+\begin{tabular}{@{\extracolsep{5pt}} ccc} 
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & Y pred =0 & Y pred =1 \\ 
+\hline \\[-1.8ex] 
+Y=0 & $159,592$ & 0 \\ 
+Y=1& $5,158$ & $209$ \\ 
+\hline \\[-1.8ex] 
+\end{tabular} 
+\end{table}
 
 \end{document}
